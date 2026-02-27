@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import type { SetupStatus, SetupProgress } from "../types";
+import { Progress } from "./Progress";
 
 interface SetupScreenProps {
   status: SetupStatus;
@@ -9,55 +11,56 @@ interface SetupScreenProps {
 }
 
 export function SetupScreen({ status, progress, error, onStart, onRetry }: SetupScreenProps) {
+  const { t } = useTranslation();
+
   return (
-    <div className="setup-screen">
-      <div className="setup-card">
-        <h1>AI Inference App</h1>
-        <p className="setup-description">
-          This app requires Python packages to be installed on your system.
-          This is a one-time setup that will download and install the necessary dependencies.
+    <div className="flex min-h-screen items-center justify-center p-6">
+      <div className="w-full max-w-[500px] rounded-2xl bg-surface p-10 text-center">
+        <h1 className="mb-4 text-[1.75rem] font-bold text-slate-50">{t("app.title")}</h1>
+        <p className="mb-6 text-[0.9rem] leading-relaxed text-slate-400">
+          {t("setup.description")}
         </p>
 
         {status === "CHECKING" && (
-          <div className="setup-status">
-            <span className="setup-spinner" />
-            <span>Checking setup status...</span>
+          <div className="flex items-center justify-center gap-2.5 p-4 text-slate-400">
+            <span className="spinner" />
+            <span>{t("setup.checking")}</span>
           </div>
         )}
 
         {status === "NEEDED" && (
-          <div className="setup-action">
-            <p className="setup-info">
-              Required packages need to be installed (~100MB download).
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-sm text-slate-500">
+              {t("setup.needed")}
             </p>
-            <button className="btn btn-primary btn-large" onClick={onStart}>
-              Start Setup
+            <button
+              className="cursor-pointer rounded-md bg-primary px-8 py-3 text-base font-medium text-white transition-opacity hover:opacity-85"
+              onClick={onStart}
+            >
+              {t("setup.startButton")}
             </button>
           </div>
         )}
 
         {status === "IN_PROGRESS" && (
-          <div className="setup-progress">
-            <div className="progress-container">
-              <div className="progress-bar">
-                <div
-                  className="progress-fill"
-                  style={{ width: `${(progress?.progress ?? 0) * 100}%` }}
-                />
-              </div>
-              <span className="progress-text">
-                {Math.round((progress?.progress ?? 0) * 100)}%
-              </span>
-            </div>
-            <p className="setup-message">{progress?.message ?? "Starting setup..."}</p>
+          <div className="flex flex-col gap-3">
+            <Progress value={(progress?.progress ?? 0) * 100} />
+            <p className="text-sm text-slate-400">
+              {progress?.message ?? t("setup.startingFallback")}
+            </p>
           </div>
         )}
 
         {status === "ERROR" && (
-          <div className="setup-error">
-            <p className="error-text">{error ?? "An unknown error occurred"}</p>
-            <button className="btn btn-primary" onClick={onRetry}>
-              Retry Setup
+          <div className="flex flex-col items-center gap-4">
+            <p className="w-full max-h-[120px] overflow-y-auto break-words rounded-md bg-surface-inset p-2.5 text-left text-xs text-danger">
+              {error ?? t("setup.unknownError")}
+            </p>
+            <button
+              className="cursor-pointer rounded-md bg-primary px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-85"
+              onClick={onRetry}
+            >
+              {t("setup.retryButton")}
             </button>
           </div>
         )}

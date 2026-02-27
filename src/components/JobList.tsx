@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { Job } from "../types";
 import { JobCard } from "./JobCard";
 
@@ -7,12 +8,18 @@ interface Props {
 }
 
 export function JobList({ jobs, onCancel }: Props) {
+  const { t } = useTranslation();
+
   if (jobs.length === 0) {
-    return <div className="job-list-empty">No jobs yet. Submit an inference request above.</div>;
+    return (
+      <div className="p-8 text-center text-[0.9rem] text-slate-500">
+        {t("jobs.emptyState")}
+      </div>
+    );
   }
 
   return (
-    <div className="job-list">
+    <div className="flex flex-col gap-3">
       {jobs.map((job) => (
         <JobCard key={job.id} job={job} onCancel={onCancel} />
       ))}

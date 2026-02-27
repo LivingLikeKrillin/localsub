@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { ServerStatus } from "../types";
 
 interface Props {
@@ -7,38 +8,56 @@ interface Props {
   onStop: () => void;
 }
 
-const statusConfig: Record<ServerStatus, { label: string; color: string }> = {
-  STOPPED: { label: "Stopped", color: "#888" },
-  STARTING: { label: "Starting...", color: "#f0a500" },
-  RUNNING: { label: "Running", color: "#22c55e" },
-  ERROR: { label: "Error", color: "#ef4444" },
+const badgeClass: Record<ServerStatus, string> = {
+  STOPPED: "bg-gray-500",
+  STARTING: "bg-warning",
+  RUNNING: "bg-success",
+  ERROR: "bg-danger",
 };
 
 export function ServerControl({ status, error, onStart, onStop }: Props) {
-  const config = statusConfig[status];
+  const { t } = useTranslation();
+
+  const badgeLabel: Record<ServerStatus, string> = {
+    STOPPED: t("server.status.stopped"),
+    STARTING: t("server.status.starting"),
+    RUNNING: t("server.status.running"),
+    ERROR: t("server.status.error"),
+  };
 
   return (
-    <div className="server-control">
-      <div className="server-status-row">
-        <span className="label">Python Server</span>
-        <span className="status-badge" style={{ backgroundColor: config.color }}>
-          {config.label}
+    <div className="mb-5 rounded-[10px] bg-surface p-4">
+      <div className="flex items-center gap-3">
+        <span className="text-[0.95rem] font-semibold">{t("server.title")}</span>
+        <span
+          className={`rounded-full px-3 py-1 text-xs font-semibold text-white ${badgeClass[status]}`}
+        >
+          {badgeLabel[status]}
         </span>
         {status === "STOPPED" || status === "ERROR" ? (
-          <button className="btn btn-start" onClick={onStart}>
-            Start Server
+          <button
+            className="cursor-pointer rounded-md bg-success px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-85"
+            onClick={onStart}
+          >
+            {t("server.startButton")}
           </button>
         ) : status === "RUNNING" ? (
-          <button className="btn btn-stop" onClick={onStop}>
-            Stop Server
+          <button
+            className="cursor-pointer rounded-md bg-danger px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-85"
+            onClick={onStop}
+          >
+            {t("server.stopButton")}
           </button>
         ) : (
-          <button className="btn" disabled>
-            Starting...
+          <button
+            className="cursor-not-allowed rounded-md bg-surface-inset px-4 py-2 text-sm font-medium text-slate-400 opacity-50"
+            disabled
+          >
+            {t("server.status.starting")}
           </button>
         )}
       </div>
-      {error && <div className="error-text">{error}</div>}
+      {error && <div className="mt-2 text-sm text-danger">{error}</div>}
     </div>
   );
 }

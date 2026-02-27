@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "SubText",
+    "loading": "로딩 중..."
+  },
+  "server": {
+    "title": "Python 서버",
+    "status": {
+      "stopped": "정지됨",
+      "starting": "시작 중...",
+      "running": "실행 중",
+      "error": "오류"
+    },
+    "startButton": "서버 시작",
+    "stopButton": "서버 중지"
+  },
+  "inference": {
+    "placeholder": "추론할 텍스트를 입력하세요...",
+    "submitButton": "추론 실행"
+  },
+  "jobs": {
+    "emptyState": "아직 작업이 없습니다. 위에서 추론 요청을 제출하세요.",
+    "state": {
+      "queued": "대기 중",
+      "running": "실행 중",
+      "done": "완료",
+      "failed": "실패",
+      "canceled": "취소됨"
+    },
+    "inputLabel": "입력:",
+    "resultLabel": "결과:",
+    "errorLabel": "오류:",
+    "copyButton": "결과 복사",
+    "copiedButton": "복사됨!",
+    "cancelButton": "취소"
+  },
+  "setup": {
+    "description": "이 앱은 시스템에 Python 패키지를 설치해야 합니다. 필요한 의존성을 다운로드하고 설치하는 일회성 설정입니다.",
+    "checking": "설정 상태 확인 중...",
+    "needed": "필수 패키지를 설치해야 합니다 (~100MB 다운로드).",
+    "startButton": "설정 시작",
+    "startingFallback": "설정 시작 중...",
+    "unknownError": "알 수 없는 오류가 발생했습니다",
+    "retryButton": "설정 재시도"
+  }
+}

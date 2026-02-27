@@ -1,0 +1,46 @@
+{
+  "app": {
+    "title": "SubText",
+    "loading": "Loading..."
+  },
+  "server": {
+    "title": "Python Server",
+    "status": {
+      "stopped": "Stopped",
+      "starting": "Starting...",
+      "running": "Running",
+      "error": "Error"
+    },
+    "startButton": "Start Server",
+    "stopButton": "Stop Server"
+  },
+  "inference": {
+    "placeholder": "Enter text for inference...",
+    "submitButton": "Run Inference"
+  },
+  "jobs": {
+    "emptyState": "No jobs yet. Submit an inference request above.",
+    "state": {
+      "queued": "Queued",
+      "running": "Running",
+      "done": "Done",
+      "failed": "Failed",
+      "canceled": "Canceled"
+    },
+    "inputLabel": "Input:",
+    "resultLabel": "Result:",
+    "errorLabel": "Error:",
+    "copyButton": "Copy Result",
+    "copiedButton": "Copied!",
+    "cancelButton": "Cancel"
+  },
+  "setup": {
+    "description": "This app requires Python packages to be installed on your system. This is a one-time setup that will download and install the necessary dependencies.",
+    "checking": "Checking setup status...",
+    "needed": "Required packages need to be installed (~100MB download).",
+    "startButton": "Start Setup",
+    "startingFallback": "Starting setup...",
+    "unknownError": "An unknown error occurred",
+    "retryButton": "Retry Setup"
+  }
+}

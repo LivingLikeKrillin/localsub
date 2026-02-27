@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { AppConfig, PartialConfig } from "../../types";
 import { useWizard } from "../../hooks/useWizard";
 import { useHardware } from "../../hooks/useHardware";
@@ -27,6 +27,13 @@ export function WizardScreen({
   });
   const hw = useHardware();
   const models = useModels();
+
+  const selectedModels = useMemo(() => {
+    const ids: string[] = [];
+    if (state.selectedWhisperModel) ids.push(state.selectedWhisperModel);
+    if (state.selectedLlmModel) ids.push(state.selectedLlmModel);
+    return ids;
+  }, [state.selectedWhisperModel, state.selectedLlmModel]);
 
   const handleComplete = useCallback(async () => {
     await complete();
@@ -111,9 +118,11 @@ export function WizardScreen({
       onNext={() => {}}
     >
       <StepInstall
+        selectedModels={selectedModels}
         downloads={models.downloads}
         onStartDownload={() => {
-          // Will be wired to actual download engine in Sprint 2
+          if (state.selectedWhisperModel) models.startDownload(state.selectedWhisperModel);
+          if (state.selectedLlmModel) models.startDownload(state.selectedLlmModel);
         }}
         onComplete={handleComplete}
         error={models.error}

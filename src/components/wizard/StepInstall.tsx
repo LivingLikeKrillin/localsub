@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { CheckCircle, AlertCircle, Download } from "lucide-react";
 import type { DownloadProgress } from "../../types";
 import { Progress } from "../Progress";
 
 type InstallPhase = "downloading" | "installing" | "verifying" | "complete" | "error";
 
 interface StepInstallProps {
+  selectedModels: string[];
   downloads: Map<string, DownloadProgress>;
   onStartDownload: () => void;
   onComplete: () => void;
@@ -27,6 +29,7 @@ function formatEta(secs: number): string {
 }
 
 export function StepInstall({
+  selectedModels,
   downloads,
   onStartDownload,
   onComplete,
@@ -36,15 +39,35 @@ export function StepInstall({
   const { t } = useTranslation();
   const [phase, setPhase] = useState<InstallPhase>("downloading");
 
+  // Trigger downloads on mount
   useEffect(() => {
+    if (selectedModels.length === 0) {
+      setPhase("complete");
+      return;
+    }
     onStartDownload();
-  }, [onStartDownload]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Detect error
   useEffect(() => {
     if (error) {
       setPhase("error");
     }
   }, [error]);
+
+  // Detect all downloads complete
+  useEffect(() => {
+    if (phase !== "downloading" || selectedModels.length === 0) return;
+
+    const allDone = selectedModels.every((id) => {
+      const dp = downloads.get(id);
+      return dp && dp.total > 0 && dp.downloaded >= dp.total;
+    });
+
+    if (allDone) {
+      setPhase("complete");
+    }
+  }, [downloads, selectedModels, phase]);
 
   // Calculate overall progress
   let totalDownloaded = 0;
@@ -64,6 +87,7 @@ export function StepInstall({
   if (phase === "error") {
     return (
       <div className="text-center">
+        <AlertCircle className="mx-auto mb-4 h-10 w-10 text-danger" />
         <h2 className="mb-4 text-lg font-semibold text-slate-50">
           {t("wizard.install.error")}
         </h2>
@@ -83,7 +107,7 @@ export function StepInstall({
   if (phase === "complete") {
     return (
       <div className="text-center">
-        <div className="mb-4 text-4xl">&#10003;</div>
+        <CheckCircle className="mx-auto mb-4 h-10 w-10 text-success" />
         <h2 className="mb-2 text-lg font-semibold text-slate-50">
           {t("wizard.install.complete")}
         </h2>
@@ -99,9 +123,12 @@ export function StepInstall({
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-slate-50">
-        {t("wizard.install.title")}
-      </h2>
+      <div className="mb-6 flex items-center gap-2">
+        <Download className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold text-slate-50">
+          {t("wizard.install.title")}
+        </h2>
+      </div>
 
       {/* Overall progress */}
       <div className="mb-4">
@@ -117,10 +144,14 @@ export function StepInstall({
         <div className="mb-4 flex flex-col gap-2">
           {Array.from(downloads.entries()).map(([id, dp]) => {
             const pct = dp.total > 0 ? (dp.downloaded / dp.total) * 100 : 0;
+            const fileLabel =
+              dp.file_name && dp.total_files > 1
+                ? `${dp.file_name} (${dp.file_index + 1}/${dp.total_files})`
+                : dp.file_name || id;
             return (
               <div key={id} className="rounded-md bg-surface-inset p-2">
                 <div className="mb-1 flex justify-between text-xs">
-                  <span className="truncate text-slate-300">{id}</span>
+                  <span className="truncate text-slate-300">{fileLabel}</span>
                   <span className="text-slate-500">{Math.round(pct)}%</span>
                 </div>
                 <div className="h-1 overflow-hidden rounded-full bg-slate-700">

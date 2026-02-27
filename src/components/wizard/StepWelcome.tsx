@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { Subtitles } from "lucide-react";
 
 interface StepWelcomeProps {
   onNext: () => void;
@@ -10,6 +11,7 @@ export function StepWelcome({ onNext, onSkip }: StepWelcomeProps) {
 
   return (
     <div className="text-center">
+      <Subtitles className="mx-auto mb-4 h-10 w-10 text-primary" />
       <h2 className="mb-4 text-2xl font-bold text-slate-50">
         {t("wizard.welcome.title")}
       </h2>

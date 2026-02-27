@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { FolderOutput } from "lucide-react";
 import { pickDirectory } from "../../lib/tauriApi";
 
 const FORMATS = ["srt", "vtt", "ass", "txt"];
@@ -37,9 +38,12 @@ export function StepOutput({
 
   return (
     <div>
-      <h2 className="mb-6 text-lg font-semibold text-slate-50">
-        {t("wizard.output.title")}
-      </h2>
+      <div className="mb-6 flex items-center gap-2">
+        <FolderOutput className="h-5 w-5 text-primary" />
+        <h2 className="text-lg font-semibold text-slate-50">
+          {t("wizard.output.title")}
+        </h2>
+      </div>
 
       {/* Output folder */}
       <div className="mb-5">
@@ -54,7 +58,7 @@ export function StepOutput({
             className="flex-1 rounded-md border border-border bg-surface-inset px-3 py-2 text-sm text-slate-300"
           />
           <button
-            className="cursor-pointer rounded-md bg-surface px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700"
+            className="cursor-pointer rounded-md bg-surface px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-surface-hover"
             onClick={handleBrowse}
           >
             {t("wizard.output.browse")}

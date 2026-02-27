@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { Mic, Languages, HardDrive } from "lucide-react";
 import type {
   ModelCatalog,
   Profile,
@@ -70,7 +71,8 @@ export function StepModels({
       </h2>
 
       {/* Whisper models */}
-      <h3 className="mb-3 text-sm font-medium text-slate-300">
+      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-medium text-slate-300">
+        <Mic className="h-4 w-4 text-primary" />
         {t("wizard.models.whisperTitle")}
       </h3>
       <div className="mb-6 flex flex-col gap-2">
@@ -86,7 +88,8 @@ export function StepModels({
       </div>
 
       {/* LLM models */}
-      <h3 className="mb-3 text-sm font-medium text-slate-300">
+      <h3 className="mb-3 flex items-center gap-1.5 text-sm font-medium text-slate-300">
+        <Languages className="h-4 w-4 text-primary" />
         {t("wizard.models.llmTitle")}
       </h3>
       <div className="mb-4 flex flex-col gap-2">
@@ -153,6 +156,7 @@ function ModelRadio({
         onChange={onChange}
         className="accent-primary"
       />
+      <HardDrive className="h-4 w-4 shrink-0 text-slate-500" />
       <span className="text-sm font-medium text-slate-200">{name}</span>
       <span className="ml-auto text-xs text-slate-500">{size}</span>
     </label>

@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
+import { Check } from "lucide-react";
 import type { WizardStep } from "../../types";
 
 const STEP_COUNT = 5;
@@ -48,9 +49,7 @@ export function WizardLayout({
                   }`}
                 >
                   {isDone ? (
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
+                    <Check className="h-3.5 w-3.5" strokeWidth={3} />
                   ) : (
                     s
                   )}
@@ -81,7 +80,7 @@ export function WizardLayout({
         <div className="mt-6 flex justify-between">
           {showBack && step > 1 ? (
             <button
-              className="cursor-pointer rounded-md px-4 py-2 text-sm text-slate-400 transition-colors hover:text-slate-200"
+              className="cursor-pointer rounded-md px-4 py-2 text-sm text-slate-400 transition-colors hover:bg-surface-hover hover:text-slate-200"
               onClick={onBack}
             >
               {t("wizard.back")}

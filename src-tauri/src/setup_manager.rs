@@ -42,11 +42,11 @@ pub fn get_python_server_dir(app: &AppHandle) -> PathBuf {
     }
 }
 
-/// Returns the directory for installed pip packages (%APPDATA%/com.tauri-ai-sse.app/python-env/).
+/// Returns the directory for installed pip packages (%APPDATA%/com.subtext.app/python-env/).
 fn get_python_env_dir() -> PathBuf {
     let app_data = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
     PathBuf::from(app_data)
-        .join("com.tauri-ai-sse.app")
+        .join("com.subtext.app")
         .join("python-env")
 }
 
@@ -54,7 +54,7 @@ fn get_python_env_dir() -> PathBuf {
 fn get_marker_path() -> PathBuf {
     let app_data = std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string());
     PathBuf::from(app_data)
-        .join("com.tauri-ai-sse.app")
+        .join("com.subtext.app")
         .join("setup-complete.marker")
 }
 

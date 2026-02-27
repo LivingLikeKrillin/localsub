@@ -67,9 +67,39 @@ pub async fn wait_for_healthy(port: u16) -> Result<(), AppError> {
 }
 
 pub fn kill_server(child: &mut Child) -> Result<(), AppError> {
+    kill_process_tree(child)?;
+    let _ = child.wait();
+    Ok(())
+}
+
+/// Kill the process and all its descendants.
+/// On Windows, `child.kill()` only kills the direct process — Uvicorn workers
+/// survive and keep the port open. We use `taskkill /T /F` to kill the entire
+/// process tree.
+#[cfg(target_os = "windows")]
+fn kill_process_tree(child: &mut Child) -> Result<(), AppError> {
+    let pid = child.id();
+    let output = Command::new("taskkill")
+        .args(["/F", "/T", "/PID", &pid.to_string()])
+        .output()
+        .map_err(|e| {
+            AppError::PythonServer(format!("Failed to run taskkill: {}", e))
+        })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        log::warn!("taskkill stderr (pid {}): {}", pid, stderr);
+        // Fallback to regular kill
+        let _ = child.kill();
+    }
+    Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+fn kill_process_tree(child: &mut Child) -> Result<(), AppError> {
+    // On Unix, send SIGKILL to the process group
     child.kill().map_err(|e| {
         AppError::PythonServer(format!("Failed to kill Python process: {}", e))
     })?;
-    let _ = child.wait();
     Ok(())
 }

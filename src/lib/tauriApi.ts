@@ -1,5 +1,16 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { Job, ServerStatus, SetupStatus } from "../types";
+import type {
+  Job,
+  ServerStatus,
+  SetupStatus,
+  HardwareInfo,
+  ProfileRecommendation,
+  DiskSpace,
+  AppConfig,
+  PartialConfig,
+  GlossaryEntry,
+  ModelCatalog,
+} from "../types";
 
 export async function startServer(): Promise<void> {
   await invoke("start_server");
@@ -35,4 +46,43 @@ export async function runSetup(): Promise<void> {
 
 export async function resetSetup(): Promise<void> {
   await invoke("reset_setup");
+}
+
+// ── Wizard commands ──
+
+export async function detectHardware(): Promise<HardwareInfo> {
+  return invoke<HardwareInfo>("detect_hardware");
+}
+
+export async function recommendProfile(
+  hw: HardwareInfo,
+): Promise<ProfileRecommendation> {
+  return invoke<ProfileRecommendation>("recommend_profile", { hw });
+}
+
+export async function getModelCatalog(): Promise<ModelCatalog> {
+  return invoke<ModelCatalog>("get_model_catalog");
+}
+
+export async function checkDiskSpace(path: string): Promise<DiskSpace> {
+  return invoke<DiskSpace>("check_disk_space", { path });
+}
+
+// ── Config commands ──
+
+export async function getConfig(): Promise<AppConfig> {
+  return invoke<AppConfig>("get_config");
+}
+
+export async function updateConfig(
+  partial: PartialConfig,
+): Promise<AppConfig> {
+  return invoke<AppConfig>("update_config", { partial });
+}
+
+export async function saveGlossary(
+  name: string,
+  entries: GlossaryEntry[],
+): Promise<void> {
+  await invoke("save_glossary", { name, entries });
 }

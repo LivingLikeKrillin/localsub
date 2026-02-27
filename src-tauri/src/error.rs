@@ -19,6 +19,15 @@ pub enum AppError {
 
     #[error("Setup error: {0}")]
     Setup(String),
+
+    #[error("Config error: {0}")]
+    Config(String),
+
+    #[error("Hardware detection error: {0}")]
+    Hardware(String),
+
+    #[error("Download error: {0}")]
+    Download(String),
 }
 
 impl Serialize for AppError {

@@ -1,5 +1,9 @@
 mod commands;
+mod commands_config;
+mod commands_wizard;
+mod config_manager;
 mod error;
+mod hw_detector;
 mod job;
 mod python_manager;
 mod setup_manager;
@@ -14,8 +18,10 @@ use state::{AppState, SharedState};
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(SharedState::new(AppState::default()))
         .invoke_handler(tauri::generate_handler![
+            // Existing commands
             commands::check_setup,
             commands::run_setup,
             commands::reset_setup,
@@ -25,6 +31,15 @@ pub fn run() {
             commands::start_inference,
             commands::cancel_job,
             commands::get_jobs,
+            // Wizard commands
+            commands_wizard::detect_hardware,
+            commands_wizard::recommend_profile,
+            commands_wizard::get_model_catalog,
+            commands_wizard::check_disk_space,
+            // Config commands
+            commands_config::get_config,
+            commands_config::update_config,
+            commands_config::save_glossary,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

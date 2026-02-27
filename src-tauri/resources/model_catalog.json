@@ -1,0 +1,85 @@
+{
+  "version": 1,
+  "whisper_models": [
+    {
+      "id": "whisper-tiny",
+      "name": "Whisper Tiny",
+      "repo": "Systran/faster-whisper-tiny",
+      "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.json"],
+      "total_size_bytes": 77000000,
+      "sha256": { "model.bin": "placeholder" },
+      "profiles": ["lite"]
+    },
+    {
+      "id": "whisper-base",
+      "name": "Whisper Base",
+      "repo": "Systran/faster-whisper-base",
+      "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.json"],
+      "total_size_bytes": 145000000,
+      "sha256": { "model.bin": "placeholder" },
+      "profiles": ["lite", "balanced"]
+    },
+    {
+      "id": "whisper-small",
+      "name": "Whisper Small",
+      "repo": "Systran/faster-whisper-small",
+      "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.json"],
+      "total_size_bytes": 488000000,
+      "sha256": { "model.bin": "placeholder" },
+      "profiles": ["balanced"]
+    },
+    {
+      "id": "whisper-medium",
+      "name": "Whisper Medium",
+      "repo": "Systran/faster-whisper-medium",
+      "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.json"],
+      "total_size_bytes": 1530000000,
+      "sha256": { "model.bin": "placeholder" },
+      "profiles": ["balanced", "power"]
+    },
+    {
+      "id": "whisper-large-v3",
+      "name": "Whisper Large V3",
+      "repo": "Systran/faster-whisper-large-v3",
+      "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.json"],
+      "total_size_bytes": 3090000000,
+      "sha256": { "model.bin": "placeholder" },
+      "profiles": ["power"]
+    }
+  ],
+  "llm_models": [
+    {
+      "id": "qwen3-4b-q4km",
+      "name": "Qwen3-4B Q4_K_M",
+      "repo": "Qwen/Qwen3-4B-GGUF",
+      "filename": "qwen3-4b-q4_k_m.gguf",
+      "size_bytes": 2800000000,
+      "sha256": "placeholder",
+      "quant": "Q4_K_M",
+      "profiles": ["lite"],
+      "n_gpu_layers_default": 0
+    },
+    {
+      "id": "qwen3-8b-q5km",
+      "name": "Qwen3-8B Q5_K_M",
+      "repo": "Qwen/Qwen3-8B-GGUF",
+      "filename": "qwen3-8b-q5_k_m.gguf",
+      "size_bytes": 5800000000,
+      "sha256": "placeholder",
+      "quant": "Q5_K_M",
+      "profiles": ["balanced"],
+      "n_gpu_layers_default": 28
+    },
+    {
+      "id": "qwen3-14b-q8",
+      "name": "Qwen3-14B Q8_0",
+      "repo": "Qwen/Qwen3-14B-GGUF",
+      "filename": "qwen3-14b-q8_0.gguf",
+      "size_bytes": 15000000000,
+      "sha256": "placeholder",
+      "quant": "Q8_0",
+      "profiles": ["power"],
+      "n_gpu_layers_default": -1
+    }
+  ]
+}

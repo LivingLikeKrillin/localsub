@@ -52,7 +52,7 @@ export function ModelManager({
                     {m.name}
                   </span>
                   <span className="rounded bg-surface-inset px-1.5 py-0.5 text-xs text-slate-500">
-                    {m.type}
+                    {m.model_type}
                   </span>
                 </div>
                 <div className="mt-1 flex gap-3 text-xs text-slate-500">

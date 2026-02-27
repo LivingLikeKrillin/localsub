@@ -153,6 +153,9 @@ export type SettingsTab =
 
 export interface DownloadProgress {
   model_id: string;
+  file_name: string;
+  file_index: number;
+  total_files: number;
   downloaded: number;
   total: number;
   speed_bps: number;
@@ -163,13 +166,19 @@ export interface DownloadProgress {
 
 export interface ModelManifestEntry {
   id: string;
-  type: "whisper" | "llm";
+  model_type: "whisper" | "llm";
   name: string;
   path: string;
   size_bytes: number;
   sha256: string;
   status: "downloading" | "verifying" | "ready" | "missing" | "corrupt";
   installed_at: string;
+}
+
+export interface ModelManifest {
+  version: number;
+  updated_at: string;
+  models: ModelManifestEntry[];
 }
 
 // ── Runtime ──

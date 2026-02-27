@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
-import { getModelCatalog } from "../lib/tauriApi";
+import {
+  getModelCatalog,
+  getModelManifest,
+  downloadModel as apiDownloadModel,
+  cancelDownload as apiCancelDownload,
+  deleteModel as apiDeleteModel,
+} from "../lib/tauriApi";
 import type {
   ModelCatalog,
   ModelManifestEntry,
@@ -30,7 +36,54 @@ export function useModels() {
     }
   }, []);
 
+  const loadManifest = useCallback(async () => {
+    try {
+      const m = await getModelManifest();
+      setManifest(m.models);
+    } catch (e) {
+      console.error("Failed to load model manifest:", e);
+    }
+  }, []);
+
+  const startDownload = useCallback(
+    async (modelId: string) => {
+      setError(null);
+      try {
+        await apiDownloadModel(modelId);
+      } catch (e) {
+        console.error("Failed to start download:", e);
+        setError(String(e));
+      }
+    },
+    [],
+  );
+
+  const cancelDownload = useCallback(async (modelId: string) => {
+    try {
+      await apiCancelDownload(modelId);
+      setDownloads((prev) => {
+        const next = new Map(prev);
+        next.delete(modelId);
+        return next;
+      });
+    } catch (e) {
+      console.error("Failed to cancel download:", e);
+    }
+  }, []);
+
+  const deleteModel = useCallback(async (modelId: string) => {
+    try {
+      await apiDeleteModel(modelId);
+    } catch (e) {
+      console.error("Failed to delete model:", e);
+      setError(String(e));
+    }
+  }, []);
+
   useEffect(() => {
+    // Load manifest on mount
+    loadManifest();
+
     const unlistenProgress = listen<DownloadProgress>(
       "download-progress",
       (event) => {
@@ -53,7 +106,18 @@ export function useModels() {
       unlistenProgress.then((fn) => fn());
       unlistenManifest.then((fn) => fn());
     };
-  }, []);
+  }, [loadManifest]);
 
-  return { catalog, manifest, downloads, loading, error, loadCatalog };
+  return {
+    catalog,
+    manifest,
+    downloads,
+    loading,
+    error,
+    loadCatalog,
+    loadManifest,
+    startDownload,
+    cancelDownload,
+    deleteModel,
+  };
 }

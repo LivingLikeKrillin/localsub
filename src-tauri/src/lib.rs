@@ -1,10 +1,13 @@
 mod commands;
 mod commands_config;
+mod commands_model;
 mod commands_wizard;
 mod config_manager;
 mod error;
 mod hw_detector;
 mod job;
+mod manifest_manager;
+mod model_downloader;
 mod python_manager;
 mod setup_manager;
 mod sse_client;
@@ -40,6 +43,12 @@ pub fn run() {
             commands_config::get_config,
             commands_config::update_config,
             commands_config::save_glossary,
+            // Model commands
+            commands_model::download_model,
+            commands_model::cancel_download,
+            commands_model::delete_model,
+            commands_model::get_model_manifest,
+            commands_model::verify_model,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

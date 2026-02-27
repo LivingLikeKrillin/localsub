@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+use tokio_util::sync::CancellationToken;
+
 use crate::job::Job;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -160,6 +162,39 @@ pub struct GlossaryEntry {
     pub target: String,
 }
 
+// ── Model Catalog types (parsed from model_catalog.json) ──
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct ModelCatalog {
+    pub version: u32,
+    pub whisper_models: Vec<WhisperCatalogEntry>,
+    pub llm_models: Vec<LlmCatalogEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct WhisperCatalogEntry {
+    pub id: String,
+    pub name: String,
+    pub repo: String,
+    pub files: Vec<String>,
+    pub total_size_bytes: u64,
+    pub sha256: HashMap<String, String>,
+    pub profiles: Vec<Profile>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct LlmCatalogEntry {
+    pub id: String,
+    pub name: String,
+    pub repo: String,
+    pub filename: String,
+    pub size_bytes: u64,
+    pub sha256: String,
+    pub quant: String,
+    pub profiles: Vec<Profile>,
+    pub n_gpu_layers_default: i32,
+}
+
 // ── App State ──
 
 pub struct AppState {
@@ -169,6 +204,8 @@ pub struct AppState {
     pub jobs: HashMap<String, Job>,
     pub setup_status: SetupStatus,
     pub app_config: Option<AppConfig>,
+    pub http_client: reqwest::Client,
+    pub active_downloads: HashMap<String, CancellationToken>,
 }
 
 impl Default for AppState {
@@ -180,6 +217,8 @@ impl Default for AppState {
             jobs: HashMap::new(),
             setup_status: SetupStatus::CHECKING,
             app_config: None,
+            http_client: reqwest::Client::new(),
+            active_downloads: HashMap::new(),
         }
     }
 }

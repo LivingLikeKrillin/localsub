@@ -10,6 +10,7 @@ import type {
   PartialConfig,
   GlossaryEntry,
   ModelCatalog,
+  ModelManifest,
 } from "../types";
 
 export async function startServer(): Promise<void> {
@@ -85,6 +86,28 @@ export async function saveGlossary(
   entries: GlossaryEntry[],
 ): Promise<void> {
   await invoke("save_glossary", { name, entries });
+}
+
+// ── Model commands ──
+
+export async function downloadModel(modelId: string): Promise<void> {
+  await invoke("download_model", { modelId });
+}
+
+export async function cancelDownload(modelId: string): Promise<void> {
+  await invoke("cancel_download", { modelId });
+}
+
+export async function deleteModel(modelId: string): Promise<void> {
+  await invoke("delete_model", { modelId });
+}
+
+export async function getModelManifest(): Promise<ModelManifest> {
+  return invoke<ModelManifest>("get_model_manifest");
+}
+
+export async function verifyModel(modelId: string): Promise<string> {
+  return invoke<string>("verify_model", { modelId });
 }
 
 // ── Dialog helpers (until @tauri-apps/plugin-dialog is installed) ──

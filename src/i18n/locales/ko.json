@@ -140,7 +140,14 @@
     "resource": {
       "ram": "RAM",
       "vram": "VRAM",
-      "warning": "리소스 사용량이 높습니다"
+      "warning": "리소스 사용량이 높습니다",
+      "whisper": "Whisper",
+      "llm": "LLM",
+      "unload": "언로드",
+      "statusUnloaded": "미로드",
+      "statusLoading": "로딩 중",
+      "statusReady": "준비됨",
+      "statusError": "오류"
     }
   },
   "settings": {

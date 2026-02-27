@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import type { ServerStatus, ResourceUsage, PipelinePhase } from "../../types";
+import type { ServerStatus, ResourceUsage, RuntimeStatus, PipelinePhase } from "../../types";
 import { getConfig } from "../../lib/tauriApi";
 import { ServerControl } from "../ServerControl";
 import { FileInput } from "./FileInput";
@@ -15,6 +15,8 @@ interface WorkspaceScreenProps {
   onStartServer: () => void;
   onStopServer: () => void;
   resources: ResourceUsage;
+  runtimeStatus?: RuntimeStatus;
+  onUnloadModel?: (modelType: string) => void;
 }
 
 export function WorkspaceScreen({
@@ -23,6 +25,8 @@ export function WorkspaceScreen({
   onStartServer,
   onStopServer,
   resources,
+  runtimeStatus,
+  onUnloadModel,
 }: WorkspaceScreenProps) {
   const stt = useStt();
   const translate = useTranslate();
@@ -153,7 +157,7 @@ export function WorkspaceScreen({
         }
       />
 
-      <ResourceMonitor resources={resources} />
+      <ResourceMonitor resources={resources} runtimeStatus={runtimeStatus} onUnloadModel={onUnloadModel} />
     </div>
   );
 }

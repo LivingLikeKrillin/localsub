@@ -12,6 +12,7 @@ import type {
   ModelCatalog,
   ModelManifest,
   SttSegment,
+  RuntimeStatus,
 } from "../types";
 
 export async function startServer(): Promise<void> {
@@ -134,6 +135,23 @@ export async function startTranslate(
 
 export async function cancelTranslate(jobId: string): Promise<void> {
   await invoke("cancel_translate", { jobId });
+}
+
+// ── Runtime commands ──
+
+export async function getRuntimeStatus(): Promise<RuntimeStatus> {
+  return invoke<RuntimeStatus>("get_runtime_status");
+}
+
+export async function loadRuntimeModel(
+  modelType: string,
+  modelId: string,
+): Promise<void> {
+  await invoke("load_runtime_model", { modelType, modelId });
+}
+
+export async function unloadRuntimeModel(modelType: string): Promise<void> {
+  await invoke("unload_runtime_model", { modelType });
 }
 
 // ── Dialog helpers (until @tauri-apps/plugin-dialog is installed) ──

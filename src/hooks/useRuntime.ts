@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { getRuntimeStatus, loadRuntimeModel, unloadRuntimeModel } from "../lib/tauriApi";
 import type { RuntimeStatus, ResourceUsage } from "../types";
 
 export function useRuntime() {
@@ -13,6 +14,11 @@ export function useRuntime() {
     vram_used_mb: null,
     vram_total_mb: null,
   });
+
+  // Fetch initial status on mount
+  useEffect(() => {
+    getRuntimeStatus().catch(() => {});
+  }, []);
 
   useEffect(() => {
     const unlistenStatus = listen<RuntimeStatus>("runtime-status", (event) => {
@@ -32,5 +38,13 @@ export function useRuntime() {
     };
   }, []);
 
-  return { status, resources };
+  const loadModel = useCallback(async (modelType: string, modelId: string) => {
+    await loadRuntimeModel(modelType, modelId);
+  }, []);
+
+  const unloadModel = useCallback(async (modelType: string) => {
+    await unloadRuntimeModel(modelType);
+  }, []);
+
+  return { status, resources, loadModel, unloadModel };
 }

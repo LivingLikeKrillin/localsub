@@ -1,6 +1,7 @@
 mod commands;
 mod commands_config;
 mod commands_model;
+mod commands_runtime;
 mod commands_stt;
 mod commands_translate;
 mod commands_wizard;
@@ -57,6 +58,10 @@ pub fn run() {
             // Translate commands
             commands_translate::start_translate,
             commands_translate::cancel_translate,
+            // Runtime commands
+            commands_runtime::get_runtime_status,
+            commands_runtime::load_runtime_model,
+            commands_runtime::unload_runtime_model,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -64,6 +69,10 @@ pub fn run() {
             if let tauri::RunEvent::Exit = event {
                 let state = app.state::<SharedState>();
                 let mut s = state.lock().expect("Failed to lock state");
+                // Cancel resource polling
+                if let Some(token) = s.poll_cancel.take() {
+                    token.cancel();
+                }
                 if let Some(ref mut child) = s.server_process {
                     log::info!("Cleaning up Python server process on exit");
                     let _ = python_manager::kill_server(child);

@@ -195,6 +195,39 @@ pub struct LlmCatalogEntry {
     pub n_gpu_layers_default: i32,
 }
 
+// ── Runtime types ──
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum RuntimeModelStatus {
+    UNLOADED,
+    LOADING,
+    READY,
+    ERROR,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RuntimeStatus {
+    pub whisper: RuntimeModelStatus,
+    pub llm: RuntimeModelStatus,
+}
+
+impl Default for RuntimeStatus {
+    fn default() -> Self {
+        Self {
+            whisper: RuntimeModelStatus::UNLOADED,
+            llm: RuntimeModelStatus::UNLOADED,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ResourceUsage {
+    pub ram_used_mb: f64,
+    pub ram_total_mb: f64,
+    pub vram_used_mb: Option<f64>,
+    pub vram_total_mb: Option<f64>,
+}
+
 // ── App State ──
 
 pub struct AppState {
@@ -206,6 +239,8 @@ pub struct AppState {
     pub app_config: Option<AppConfig>,
     pub http_client: reqwest::Client,
     pub active_downloads: HashMap<String, CancellationToken>,
+    pub runtime_status: RuntimeStatus,
+    pub poll_cancel: Option<CancellationToken>,
 }
 
 impl Default for AppState {
@@ -219,6 +254,8 @@ impl Default for AppState {
             app_config: None,
             http_client: reqwest::Client::new(),
             active_downloads: HashMap::new(),
+            runtime_status: RuntimeStatus::default(),
+            poll_cancel: None,
         }
     }
 }

@@ -1,8 +1,10 @@
 import { useTranslation } from "react-i18next";
-import type { ResourceUsage } from "../../types";
+import type { ResourceUsage, RuntimeStatus, RuntimeModelStatus } from "../../types";
 
 interface ResourceMonitorProps {
   resources: ResourceUsage;
+  runtimeStatus?: RuntimeStatus;
+  onUnloadModel?: (modelType: string) => void;
 }
 
 function UsageBar({ label, used, total }: { label: string; used: number; total: number }) {
@@ -26,12 +28,73 @@ function UsageBar({ label, used, total }: { label: string; used: number; total: 
   );
 }
 
-export function ResourceMonitor({ resources }: ResourceMonitorProps) {
+function ModelStatusRow({
+  label,
+  status,
+  onUnload,
+}: {
+  label: string;
+  status: RuntimeModelStatus;
+  onUnload?: () => void;
+}) {
+  const { t } = useTranslation();
+
+  const dotColor =
+    status === "READY"
+      ? "bg-green-500"
+      : status === "LOADING"
+        ? "bg-yellow-500 animate-pulse"
+        : status === "ERROR"
+          ? "bg-red-500"
+          : "bg-slate-500";
+
+  const statusLabel =
+    status === "READY"
+      ? t("workspace.resource.statusReady")
+      : status === "LOADING"
+        ? t("workspace.resource.statusLoading")
+        : status === "ERROR"
+          ? t("workspace.resource.statusError")
+          : t("workspace.resource.statusUnloaded");
+
+  return (
+    <div className="flex items-center gap-2">
+      <span className={`h-2 w-2 rounded-full ${dotColor}`} />
+      <span className="text-xs font-medium text-slate-400">{label}</span>
+      <span className="text-xs text-slate-500">{statusLabel}</span>
+      {status === "READY" && onUnload && (
+        <button
+          onClick={onUnload}
+          className="ml-auto text-xs text-slate-500 hover:text-slate-300 transition-colors"
+        >
+          {t("workspace.resource.unload")}
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function ResourceMonitor({ resources, runtimeStatus, onUnloadModel }: ResourceMonitorProps) {
   const { t } = useTranslation();
 
   return (
     <div className="rounded-xl bg-surface p-4">
       <div className="flex flex-col gap-2">
+        {runtimeStatus && (
+          <>
+            <ModelStatusRow
+              label={t("workspace.resource.whisper")}
+              status={runtimeStatus.whisper}
+              onUnload={onUnloadModel ? () => onUnloadModel("whisper") : undefined}
+            />
+            <ModelStatusRow
+              label={t("workspace.resource.llm")}
+              status={runtimeStatus.llm}
+              onUnload={onUnloadModel ? () => onUnloadModel("llm") : undefined}
+            />
+            <div className="my-1 border-t border-slate-700" />
+          </>
+        )}
         <UsageBar
           label={t("workspace.resource.ram")}
           used={resources.ram_used_mb}

@@ -1,11 +1,12 @@
 use tauri::{AppHandle, Emitter, Manager, State};
 
+use crate::commands_runtime;
 use crate::error::AppError;
 use crate::job::Job;
 use crate::python_manager;
 use crate::setup_manager;
 use crate::sse_client;
-use crate::state::{ServerStatus, SetupStatus, SharedState};
+use crate::state::{RuntimeModelStatus, RuntimeStatus, ServerStatus, SetupStatus, SharedState};
 
 #[tauri::command]
 pub async fn check_setup(
@@ -115,7 +116,10 @@ pub async fn start_server(
         let state = app_clone.state::<SharedState>();
         match python_manager::wait_for_healthy(port).await {
             Ok(()) => {
+                // Start resource polling
+                let token = commands_runtime::start_resource_polling(app_clone.clone(), port);
                 let mut s = state.lock().expect("Failed to lock state");
+                s.poll_cancel = Some(token);
                 s.server_status = ServerStatus::RUNNING;
                 let _ = app_clone.emit("server-status", &s.server_status);
             }
@@ -142,12 +146,26 @@ pub async fn stop_server(
     state: State<'_, SharedState>,
 ) -> Result<(), AppError> {
     let mut s = state.lock().expect("Failed to lock state");
+
+    // Cancel resource polling
+    if let Some(token) = s.poll_cancel.take() {
+        token.cancel();
+    }
+
     if let Some(ref mut child) = s.server_process {
         python_manager::kill_server(child)?;
     }
     s.server_process = None;
     s.server_status = ServerStatus::STOPPED;
     let _ = app.emit("server-status", &s.server_status);
+
+    // Reset runtime status
+    s.runtime_status = RuntimeStatus {
+        whisper: RuntimeModelStatus::UNLOADED,
+        llm: RuntimeModelStatus::UNLOADED,
+    };
+    let _ = app.emit("runtime-status", &s.runtime_status);
+
     Ok(())
 }
 

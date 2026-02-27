@@ -140,7 +140,14 @@
     "resource": {
       "ram": "RAM",
       "vram": "VRAM",
-      "warning": "High resource usage"
+      "warning": "High resource usage",
+      "whisper": "Whisper",
+      "llm": "LLM",
+      "unload": "Unload",
+      "statusUnloaded": "Unloaded",
+      "statusLoading": "Loading",
+      "statusReady": "Ready",
+      "statusError": "Error"
     }
   },
   "settings": {

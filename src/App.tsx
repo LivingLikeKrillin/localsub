@@ -103,6 +103,8 @@ function App() {
           onStartServer={startServer}
           onStopServer={stopServer}
           resources={runtime.resources}
+          runtimeStatus={runtime.status}
+          onUnloadModel={runtime.unloadModel}
         />
       )}
 

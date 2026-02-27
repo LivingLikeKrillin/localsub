@@ -16,6 +16,9 @@ src-tauri/resources/python-embed/
 src-tauri/resources/get-pip.py
 src-tauri/resources/python-server/
 
+# Claude Code
+.claude/
+
 # IDE
 .idea/
 *.iml

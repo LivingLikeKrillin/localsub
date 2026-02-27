@@ -294,9 +294,142 @@ pub fn run_setup_sync(app: &AppHandle) -> Result<(), AppError> {
         AppError::Setup(format!("Failed to write setup marker: {}", e))
     })?;
 
+    // Step 4: Install llama-cpp-python (GPU/CPU)
+    emit_progress(app, "llm", "Installing LLM package...", 0.92);
+    let llm_backend = install_llm_package(app)?;
+    emit_progress(
+        app,
+        "llm",
+        &format!("LLM package installed ({})", llm_backend),
+        0.98,
+    );
+
     emit_progress(app, "complete", "Setup complete!", 1.0);
 
     Ok(())
+}
+
+/// Installs llama-cpp-python with GPU (CUDA) or CPU wheel.
+/// Returns `"cuda"` or `"cpu"` depending on which was installed.
+pub fn install_llm_package(app: &AppHandle) -> Result<String, AppError> {
+    let python = get_python_executable(app);
+    let env_dir = get_python_env_dir();
+    let env_vars = build_python_env(app);
+
+    // Detect NVIDIA GPU
+    let has_gpu = detect_nvidia_gpu();
+
+    let pip_exe = env_dir.join("bin").join("pip.exe");
+
+    if has_gpu {
+        // Try CUDA wheel first
+        let mut cmd = if pip_exe.exists() {
+            let mut c = Command::new(&pip_exe);
+            c.arg("install")
+                .arg("--no-user")
+                .arg("llama-cpp-python>=0.3.0")
+                .arg("--extra-index-url")
+                .arg("https://abetlen.github.io/llama-cpp-python/whl/cu121")
+                .arg("--target")
+                .arg(&env_dir);
+            c
+        } else {
+            let mut c = Command::new(&python);
+            c.arg("-m")
+                .arg("pip")
+                .arg("install")
+                .arg("--no-user")
+                .arg("llama-cpp-python>=0.3.0")
+                .arg("--extra-index-url")
+                .arg("https://abetlen.github.io/llama-cpp-python/whl/cu121")
+                .arg("--target")
+                .arg(&env_dir);
+            c
+        };
+
+        for (k, v) in &env_vars {
+            cmd.env(k, v);
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            cmd.creation_flags(0x08000000);
+        }
+
+        let output = cmd.output().map_err(|e| {
+            AppError::Setup(format!("Failed to run pip install (CUDA): {}", e))
+        })?;
+
+        if output.status.success() {
+            return Ok("cuda".to_string());
+        }
+
+        log::warn!(
+            "CUDA wheel install failed, falling back to CPU: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+
+    // CPU fallback (or no GPU)
+    let mut cmd = if pip_exe.exists() {
+        let mut c = Command::new(&pip_exe);
+        c.arg("install")
+            .arg("--no-user")
+            .arg("llama-cpp-python>=0.3.0")
+            .arg("--target")
+            .arg(&env_dir);
+        c
+    } else {
+        let mut c = Command::new(&python);
+        c.arg("-m")
+            .arg("pip")
+            .arg("install")
+            .arg("--no-user")
+            .arg("llama-cpp-python>=0.3.0")
+            .arg("--target")
+            .arg(&env_dir);
+        c
+    };
+
+    for (k, v) in &env_vars {
+        cmd.env(k, v);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+
+    let output = cmd.output().map_err(|e| {
+        AppError::Setup(format!("Failed to run pip install (CPU): {}", e))
+    })?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(AppError::Setup(format!(
+            "llama-cpp-python install failed: {}",
+            stderr
+        )));
+    }
+
+    Ok("cpu".to_string())
+}
+
+fn detect_nvidia_gpu() -> bool {
+    let mut cmd = Command::new("nvidia-smi");
+
+    #[cfg(target_os = "windows")]
+    {
+        use std::os::windows::process::CommandExt;
+        cmd.creation_flags(0x08000000);
+    }
+
+    match cmd.output() {
+        Ok(output) => output.status.success(),
+        Err(_) => false,
+    }
 }
 
 /// Removes the setup marker so setup will run again on next check.

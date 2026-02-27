@@ -2,6 +2,7 @@ mod commands;
 mod commands_config;
 mod commands_model;
 mod commands_stt;
+mod commands_translate;
 mod commands_wizard;
 mod config_manager;
 mod error;
@@ -53,6 +54,9 @@ pub fn run() {
             // STT commands
             commands_stt::start_stt,
             commands_stt::cancel_stt,
+            // Translate commands
+            commands_translate::start_translate,
+            commands_translate::cancel_translate,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

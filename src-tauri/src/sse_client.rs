@@ -94,6 +94,63 @@ fn update_job_from_event(app: &AppHandle, event: &SseEvent) -> bool {
     }
 }
 
+// ── Common job update helpers ─────────────────────────────────────
+
+fn update_job_progress(app: &AppHandle, job_id: &str, progress: u32, message: &str) {
+    let state = app.state::<SharedState>();
+    let mut guard = match state.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    if let Some(job) = guard.jobs.get_mut(job_id) {
+        job.state = JobState::RUNNING;
+        job.progress = progress;
+        job.message = Some(message.to_string());
+        let _ = app.emit("job-updated", job.clone());
+    }
+}
+
+fn update_job_done(app: &AppHandle, job_id: &str, result: &str, message: &str) {
+    let state = app.state::<SharedState>();
+    let mut guard = match state.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    if let Some(job) = guard.jobs.get_mut(job_id) {
+        job.state = JobState::DONE;
+        job.progress = 100;
+        job.result = Some(result.to_string());
+        job.message = Some(message.to_string());
+        let _ = app.emit("job-updated", job.clone());
+    }
+}
+
+fn update_job_error(app: &AppHandle, job_id: &str, error: &str) {
+    let state = app.state::<SharedState>();
+    let mut guard = match state.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    if let Some(job) = guard.jobs.get_mut(job_id) {
+        job.state = JobState::FAILED;
+        job.error = Some(error.to_string());
+        let _ = app.emit("job-updated", job.clone());
+    }
+}
+
+fn update_job_cancelled(app: &AppHandle, job_id: &str, message: &str) {
+    let state = app.state::<SharedState>();
+    let mut guard = match state.lock() {
+        Ok(g) => g,
+        Err(_) => return,
+    };
+    if let Some(job) = guard.jobs.get_mut(job_id) {
+        job.state = JobState::CANCELED;
+        job.message = Some(message.to_string());
+        let _ = app.emit("job-updated", job.clone());
+    }
+}
+
 // ── STT stream handling ───────────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize)]
@@ -133,7 +190,7 @@ pub async fn subscribe_to_stt_stream(app: AppHandle, job_id: String, port: u16) 
             }
             Err(err) => {
                 log::error!("STT SSE error for job {}: {}", job_id, err);
-                update_stt_error(&app, &job_id, &format!("SSE connection error: {}", err));
+                update_job_error(&app, &job_id, &format!("SSE connection error: {}", err));
                 es.close();
                 return;
             }
@@ -155,7 +212,7 @@ fn handle_stt_event(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            update_stt_progress(app, job_id, progress, &message);
+            update_job_progress(app, job_id, progress, &message);
             false
         }
         "stt_segment" => {
@@ -179,7 +236,7 @@ fn handle_stt_event(
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string();
-            update_stt_done(app, job_id, &result);
+            update_job_done(app, job_id, &result, "Transcription complete");
             true
         }
         "error" => {
@@ -188,11 +245,11 @@ fn handle_stt_event(
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unknown error")
                 .to_string();
-            update_stt_error(app, job_id, &error);
+            update_job_error(app, job_id, &error);
             true
         }
         "cancelled" => {
-            update_stt_cancelled(app, job_id);
+            update_job_cancelled(app, job_id, "Transcription cancelled");
             true
         }
         _ => {
@@ -202,57 +259,112 @@ fn handle_stt_event(
     }
 }
 
-fn update_stt_progress(app: &AppHandle, job_id: &str, progress: u32, message: &str) {
-    let state = app.state::<SharedState>();
-    let mut guard = match state.lock() {
-        Ok(g) => g,
-        Err(_) => return,
-    };
-    if let Some(job) = guard.jobs.get_mut(job_id) {
-        job.state = JobState::RUNNING;
-        job.progress = progress;
-        job.message = Some(message.to_string());
-        let _ = app.emit("job-updated", job.clone());
+// ── Translate stream handling ─────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct TranslateSegmentEvent {
+    pub job_id: String,
+    pub index: u32,
+    pub original: String,
+    pub translated: String,
+}
+
+pub async fn subscribe_to_translate_stream(app: AppHandle, job_id: String, port: u16) {
+    let url = format!("http://127.0.0.1:{}/translate/stream/{}", port, job_id);
+    let mut es = EventSource::get(&url);
+
+    while let Some(event) = es.next().await {
+        match event {
+            Ok(Event::Open) => {
+                log::info!("Translate SSE connection opened for job {}", job_id);
+            }
+            Ok(Event::Message(msg)) => {
+                let parsed: Result<serde_json::Value, _> = serde_json::from_str(&msg.data);
+                match parsed {
+                    Ok(value) => {
+                        let event_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                        let should_close =
+                            handle_translate_event(&app, &job_id, event_type, &value);
+                        if should_close {
+                            es.close();
+                            return;
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("Failed to parse Translate SSE event: {}", e);
+                    }
+                }
+            }
+            Err(err) => {
+                log::error!("Translate SSE error for job {}: {}", job_id, err);
+                update_job_error(&app, &job_id, &format!("SSE connection error: {}", err));
+                es.close();
+                return;
+            }
+        }
     }
 }
 
-fn update_stt_done(app: &AppHandle, job_id: &str, result: &str) {
-    let state = app.state::<SharedState>();
-    let mut guard = match state.lock() {
-        Ok(g) => g,
-        Err(_) => return,
-    };
-    if let Some(job) = guard.jobs.get_mut(job_id) {
-        job.state = JobState::DONE;
-        job.progress = 100;
-        job.result = Some(result.to_string());
-        job.message = Some("Transcription complete".to_string());
-        let _ = app.emit("job-updated", job.clone());
-    }
-}
-
-fn update_stt_error(app: &AppHandle, job_id: &str, error: &str) {
-    let state = app.state::<SharedState>();
-    let mut guard = match state.lock() {
-        Ok(g) => g,
-        Err(_) => return,
-    };
-    if let Some(job) = guard.jobs.get_mut(job_id) {
-        job.state = JobState::FAILED;
-        job.error = Some(error.to_string());
-        let _ = app.emit("job-updated", job.clone());
-    }
-}
-
-fn update_stt_cancelled(app: &AppHandle, job_id: &str) {
-    let state = app.state::<SharedState>();
-    let mut guard = match state.lock() {
-        Ok(g) => g,
-        Err(_) => return,
-    };
-    if let Some(job) = guard.jobs.get_mut(job_id) {
-        job.state = JobState::CANCELED;
-        job.message = Some("Transcription cancelled".to_string());
-        let _ = app.emit("job-updated", job.clone());
+fn handle_translate_event(
+    app: &AppHandle,
+    job_id: &str,
+    event_type: &str,
+    value: &serde_json::Value,
+) -> bool {
+    match event_type {
+        "translate_progress" => {
+            let progress = value.get("progress").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            let message = value
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            update_job_progress(app, job_id, progress, &message);
+            false
+        }
+        "translate_segment" => {
+            let seg = TranslateSegmentEvent {
+                job_id: job_id.to_string(),
+                index: value.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                original: value
+                    .get("original")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+                translated: value
+                    .get("translated")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+            };
+            let _ = app.emit("translate-segment", &seg);
+            false
+        }
+        "done" => {
+            let result = value
+                .get("result")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            update_job_done(app, job_id, &result, "Translation complete");
+            true
+        }
+        "error" => {
+            let error = value
+                .get("error")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown error")
+                .to_string();
+            update_job_error(app, job_id, &error);
+            true
+        }
+        "cancelled" => {
+            update_job_cancelled(app, job_id, "Translation cancelled");
+            true
+        }
+        _ => {
+            log::warn!("Unknown translate event type: {}", event_type);
+            false
+        }
     }
 }

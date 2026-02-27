@@ -11,6 +11,7 @@ import type {
   GlossaryEntry,
   ModelCatalog,
   ModelManifest,
+  SttSegment,
 } from "../types";
 
 export async function startServer(): Promise<void> {
@@ -121,6 +122,18 @@ export async function startStt(
 
 export async function cancelStt(jobId: string): Promise<void> {
   await invoke("cancel_stt", { jobId });
+}
+
+// ── Translate commands ──
+
+export async function startTranslate(
+  segments: SttSegment[],
+): Promise<Job> {
+  return invoke<Job>("start_translate", { segments });
+}
+
+export async function cancelTranslate(jobId: string): Promise<void> {
+  await invoke("cancel_translate", { jobId });
 }
 
 // ── Dialog helpers (until @tauri-apps/plugin-dialog is installed) ──

@@ -87,6 +87,21 @@ pub fn update_config(partial: PartialConfig, current: &mut AppConfig) -> Result<
     save_config(current)
 }
 
+pub fn load_glossary(name: &str) -> Result<Vec<GlossaryEntry>, AppError> {
+    let dir = glossary_dir()?;
+    let filename = sanitize_filename(name);
+    let path = dir.join(format!("{}.json", filename));
+    if path.exists() {
+        let data = fs::read_to_string(&path)
+            .map_err(|e| AppError::Config(format!("Failed to read glossary: {}", e)))?;
+        let entries: Vec<GlossaryEntry> = serde_json::from_str(&data)
+            .map_err(|e| AppError::Config(format!("Failed to parse glossary: {}", e)))?;
+        Ok(entries)
+    } else {
+        Ok(Vec::new())
+    }
+}
+
 pub fn save_glossary(name: &str, entries: &[GlossaryEntry]) -> Result<(), AppError> {
     let dir = glossary_dir()?;
     fs::create_dir_all(&dir)

@@ -22,7 +22,7 @@ export function useConfig() {
   }, []);
 
   useEffect(() => {
-    load();
+    load().catch(() => {});
   }, [load]);
 
   const update = useCallback(

@@ -19,17 +19,16 @@ export function useJobs() {
       .catch(console.error);
 
     // Listen for job updates
-    const unlisten = listen<Job>("job-updated", (event) => {
+    let unlisten: (() => void) | null = null;
+    listen<Job>("job-updated", (event) => {
       setJobs((prev) => {
         const next = new Map(prev);
         next.set(event.payload.id, event.payload);
         return next;
       });
-    });
+    }).then((fn) => { unlisten = fn; });
 
-    return () => {
-      unlisten.then((fn) => fn());
-    };
+    return () => { unlisten?.(); };
   }, []);
 
   // Return jobs sorted by id descending (newest first)

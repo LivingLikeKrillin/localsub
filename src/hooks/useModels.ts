@@ -84,7 +84,10 @@ export function useModels() {
     // Load manifest on mount
     loadManifest();
 
-    const unlistenProgress = listen<DownloadProgress>(
+    let unlistenProgress: (() => void) | null = null;
+    let unlistenManifest: (() => void) | null = null;
+
+    listen<DownloadProgress>(
       "download-progress",
       (event) => {
         setDownloads((prev) => {
@@ -93,18 +96,18 @@ export function useModels() {
           return next;
         });
       },
-    );
+    ).then((fn) => { unlistenProgress = fn; });
 
-    const unlistenManifest = listen<ModelManifestEntry[]>(
+    listen<ModelManifestEntry[]>(
       "model-manifest",
       (event) => {
         setManifest(event.payload);
       },
-    );
+    ).then((fn) => { unlistenManifest = fn; });
 
     return () => {
-      unlistenProgress.then((fn) => fn());
-      unlistenManifest.then((fn) => fn());
+      unlistenProgress?.();
+      unlistenManifest?.();
     };
   }, [loadManifest]);
 

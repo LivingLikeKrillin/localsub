@@ -21,21 +21,19 @@ export function useRuntime() {
   }, []);
 
   useEffect(() => {
-    const unlistenStatus = listen<RuntimeStatus>("runtime-status", (event) => {
+    let unlisten: (() => void) | null = null;
+    listen<RuntimeStatus>("runtime-status", (event) => {
       setStatus(event.payload);
-    });
-    return () => {
-      unlistenStatus.then((fn) => fn());
-    };
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
   }, []);
 
   useEffect(() => {
-    const unlistenResources = listen<ResourceUsage>("resource-usage", (event) => {
+    let unlisten: (() => void) | null = null;
+    listen<ResourceUsage>("resource-usage", (event) => {
       setResources(event.payload);
-    });
-    return () => {
-      unlistenResources.then((fn) => fn());
-    };
+    }).then((fn) => { unlisten = fn; });
+    return () => { unlisten?.(); };
   }, []);
 
   const loadModel = useCallback(async (modelType: string, modelId: string) => {

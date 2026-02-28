@@ -35,7 +35,13 @@ pub async fn start_translate(
 
     // Load glossary
     let glossary: Vec<GlossaryEntry> =
-        config_manager::load_glossary(&config.active_glossary).unwrap_or_default();
+        match config_manager::load_glossary(&config.active_glossary) {
+            Ok(g) => g,
+            Err(e) => {
+                log::warn!("Failed to load glossary '{}': {}", config.active_glossary, e);
+                vec![]
+            }
+        };
 
     // Find a ready LLM model from manifest
     let manifest = manifest_manager::load_manifest(&config)?;

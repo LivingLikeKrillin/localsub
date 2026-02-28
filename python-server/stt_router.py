@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -22,6 +23,8 @@ class SttStartResponse(BaseModel):
 
 @router.post("/start", response_model=SttStartResponse)
 async def start_stt(request: SttStartRequest):
+    if not request.file_path or not os.path.isfile(request.file_path):
+        raise HTTPException(status_code=400, detail="Invalid or missing file_path")
     job_id = create_stt_job(
         file_path=request.file_path,
         language=request.language,

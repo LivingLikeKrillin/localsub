@@ -33,43 +33,30 @@ pub async fn download_model(
 ) -> Result<(), AppError> {
     let catalog = load_catalog(&app)?;
 
-    // Find model in catalog (whisper or llm)
-    let is_whisper = catalog.whisper_models.iter().any(|m| m.id == model_id);
-    let is_llm = catalog.llm_models.iter().any(|m| m.id == model_id);
+    // Extract info needed before spawning — find in whisper first, then llm
+    let (model_name, model_type, size_bytes, representative_hash) =
+        if let Some(m) = catalog.whisper_models.iter().find(|m| m.id == model_id) {
+            (
+                m.name.clone(),
+                "whisper".to_string(),
+                m.total_size_bytes,
+                m.sha256.get("model.bin").cloned().unwrap_or_default(),
+            )
+        } else if let Some(m) = catalog.llm_models.iter().find(|m| m.id == model_id) {
+            (
+                m.name.clone(),
+                "llm".to_string(),
+                m.size_bytes,
+                m.sha256.clone(),
+            )
+        } else {
+            return Err(AppError::Download(format!(
+                "Model '{}' not found in catalog",
+                model_id
+            )));
+        };
 
-    if !is_whisper && !is_llm {
-        return Err(AppError::Download(format!(
-            "Model '{}' not found in catalog",
-            model_id
-        )));
-    }
-
-    // Extract info needed before spawning
-    let (model_name, model_type, size_bytes, representative_hash) = if is_whisper {
-        let m = catalog
-            .whisper_models
-            .iter()
-            .find(|m| m.id == model_id)
-            .unwrap();
-        (
-            m.name.clone(),
-            "whisper".to_string(),
-            m.total_size_bytes,
-            m.sha256.get("model.bin").cloned().unwrap_or_default(),
-        )
-    } else {
-        let m = catalog
-            .llm_models
-            .iter()
-            .find(|m| m.id == model_id)
-            .unwrap();
-        (
-            m.name.clone(),
-            "llm".to_string(),
-            m.size_bytes,
-            m.sha256.clone(),
-        )
-    };
+    let is_whisper = model_type == "whisper";
 
     // Get config and set up manifest entry
     let (config, http_client) = {
@@ -131,35 +118,39 @@ pub async fn download_model(
 
     tokio::spawn(async move {
         let result = if is_whisper {
-            let model = catalog
-                .whisper_models
-                .iter()
-                .find(|m| m.id == model_id_clone)
-                .unwrap()
-                .clone();
-            model_downloader::download_whisper_model(
-                &http_client,
-                &app_clone,
-                &model,
-                &dest_dir,
-                cancel.clone(),
-            )
-            .await
+            match catalog.whisper_models.iter().find(|m| m.id == model_id_clone) {
+                Some(model) => {
+                    model_downloader::download_whisper_model(
+                        &http_client,
+                        &app_clone,
+                        &model.clone(),
+                        &dest_dir,
+                        cancel.clone(),
+                    )
+                    .await
+                }
+                None => Err(AppError::InvalidState(format!(
+                    "Whisper model '{}' disappeared from catalog",
+                    model_id_clone
+                ))),
+            }
         } else {
-            let model = catalog
-                .llm_models
-                .iter()
-                .find(|m| m.id == model_id_clone)
-                .unwrap()
-                .clone();
-            model_downloader::download_llm_model(
-                &http_client,
-                &app_clone,
-                &model,
-                &dest_dir,
-                cancel.clone(),
-            )
-            .await
+            match catalog.llm_models.iter().find(|m| m.id == model_id_clone) {
+                Some(model) => {
+                    model_downloader::download_llm_model(
+                        &http_client,
+                        &app_clone,
+                        &model.clone(),
+                        &dest_dir,
+                        cancel.clone(),
+                    )
+                    .await
+                }
+                None => Err(AppError::InvalidState(format!(
+                    "LLM model '{}' disappeared from catalog",
+                    model_id_clone
+                ))),
+            }
         };
 
         // Remove from active downloads via AppHandle

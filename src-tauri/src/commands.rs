@@ -118,21 +118,33 @@ pub async fn start_server(
             Ok(()) => {
                 // Start resource polling
                 let token = commands_runtime::start_resource_polling(app_clone.clone(), port);
-                let mut s = state.lock().expect("Failed to lock state");
-                s.poll_cancel = Some(token);
-                s.server_status = ServerStatus::RUNNING;
-                let _ = app_clone.emit("server-status", &s.server_status);
+                match state.lock() {
+                    Ok(mut s) => {
+                        s.poll_cancel = Some(token);
+                        s.server_status = ServerStatus::RUNNING;
+                        let _ = app_clone.emit("server-status", &s.server_status);
+                    }
+                    Err(e) => {
+                        log::error!("Failed to lock state after health check success: {}", e);
+                    }
+                }
             }
             Err(e) => {
                 log::error!("Server health check failed: {}", e);
-                let mut s = state.lock().expect("Failed to lock state");
-                s.server_status = ServerStatus::ERROR;
-                let _ = app_clone.emit("server-status", &s.server_status);
-                // Kill the process if health check fails
-                if let Some(ref mut child) = s.server_process {
-                    let _ = python_manager::kill_server(child);
+                match state.lock() {
+                    Ok(mut s) => {
+                        s.server_status = ServerStatus::ERROR;
+                        let _ = app_clone.emit("server-status", &s.server_status);
+                        // Kill the process if health check fails
+                        if let Some(ref mut child) = s.server_process {
+                            let _ = python_manager::kill_server(child);
+                        }
+                        s.server_process = None;
+                    }
+                    Err(e2) => {
+                        log::error!("Failed to lock state after health check failure: {}", e2);
+                    }
                 }
-                s.server_process = None;
             }
         }
     });

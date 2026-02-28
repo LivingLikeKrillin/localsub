@@ -120,6 +120,32 @@ def get_stt_job(job_id: str) -> dict[str, Any] | None:
     return _stt_jobs.get(job_id)
 
 
+def cleanup_job(job_id: str) -> None:
+    """Remove a terminal-state job from memory."""
+    job = _stt_jobs.get(job_id)
+    if job and job["state"] in (
+        SttJobState.DONE,
+        SttJobState.FAILED,
+        SttJobState.CANCELED,
+    ):
+        del _stt_jobs[job_id]
+
+
+def _auto_purge_jobs() -> None:
+    """Auto-purge oldest completed jobs when dict exceeds 100 entries."""
+    if len(_stt_jobs) <= 100:
+        return
+    terminal = [
+        jid
+        for jid, j in _stt_jobs.items()
+        if j["state"] in (SttJobState.DONE, SttJobState.FAILED, SttJobState.CANCELED)
+    ]
+    for jid in terminal:
+        del _stt_jobs[jid]
+        if len(_stt_jobs) <= 100:
+            break
+
+
 # ── SSE generator ──────────────────────────────────────────────────
 
 async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
@@ -143,6 +169,7 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     if not model_id:
         yield {"type": "error", "job_id": job_id, "error": "No whisper model available"}
         job["state"] = SttJobState.FAILED
+        cleanup_job(job_id)
         return
 
     # Load model if needed
@@ -158,11 +185,13 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
         except Exception as e:
             yield {"type": "error", "job_id": job_id, "error": f"Failed to load model: {e}"}
             job["state"] = SttJobState.FAILED
+            cleanup_job(job_id)
             return
 
     if job["cancel_flag"]:
         job["state"] = SttJobState.CANCELED
         yield {"type": "cancelled", "job_id": job_id}
+        cleanup_job(job_id)
         return
 
     yield {
@@ -247,3 +276,6 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     except Exception as e:
         job["state"] = SttJobState.FAILED
         yield {"type": "error", "job_id": job_id, "error": str(e)}
+    finally:
+        cleanup_job(job_id)
+        _auto_purge_jobs()

@@ -43,6 +43,28 @@ def get_job(job_id: str) -> dict[str, Any] | None:
     return jobs.get(job_id)
 
 
+def cleanup_job(job_id: str) -> None:
+    """Remove a terminal-state job from memory."""
+    job = jobs.get(job_id)
+    if job and job["state"] in (JobState.DONE, JobState.FAILED, JobState.CANCELED):
+        del jobs[job_id]
+
+
+def _auto_purge_jobs() -> None:
+    """Auto-purge oldest completed jobs when dict exceeds 100 entries."""
+    if len(jobs) <= 100:
+        return
+    terminal = [
+        jid
+        for jid, j in jobs.items()
+        if j["state"] in (JobState.DONE, JobState.FAILED, JobState.CANCELED)
+    ]
+    for jid in terminal:
+        del jobs[jid]
+        if len(jobs) <= 100:
+            break
+
+
 async def run_inference(job_id: str):
     """Generator that yields SSE events for a 10-step mock inference."""
     job = jobs.get(job_id)
@@ -58,6 +80,7 @@ async def run_inference(job_id: str):
         if job["cancel_flag"]:
             job["state"] = JobState.CANCELED
             yield {"type": "cancelled", "job_id": job_id}
+            cleanup_job(job_id)
             return
 
         await asyncio.sleep(1)
@@ -71,3 +94,6 @@ async def run_inference(job_id: str):
     job["state"] = JobState.DONE
     job["result"] = result
     yield {"type": "done", "job_id": job_id, "result": result}
+
+    cleanup_job(job_id)
+    _auto_purge_jobs()

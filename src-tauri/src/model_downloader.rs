@@ -170,7 +170,11 @@ pub async fn download_file(
 
 pub async fn verify_sha256(path: &Path, expected: &str) -> Result<bool, AppError> {
     if expected == "placeholder" || expected.is_empty() {
-        // Skip verification for placeholder hashes (dev convenience)
+        log::warn!(
+            "Skipping SHA-256 verification for {:?}: hash is '{}'",
+            path.file_name().unwrap_or_default(),
+            expected
+        );
         return Ok(true);
     }
 

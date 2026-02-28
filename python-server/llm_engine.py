@@ -6,12 +6,15 @@ across jobs to avoid repeated load times.
 
 import asyncio
 import json
+import logging
 import os
 import subprocess
 import uuid
 from enum import Enum
 from pathlib import Path
 from typing import Any, AsyncGenerator
+
+log = logging.getLogger(__name__)
 
 try:
     from llama_cpp import Llama
@@ -85,8 +88,8 @@ def load_model(model_id: str, n_gpu_layers: int | None = None) -> bool:
             )
             _loaded_model_id = model_id
             return True
-        except Exception:
-            pass  # fallback to CPU
+        except Exception as e:
+            log.warning("GPU load failed, falling back to CPU: %s", e)
 
     _model = Llama(
         model_path=str(model_path),
@@ -160,6 +163,32 @@ def get_translate_job(job_id: str) -> dict[str, Any] | None:
     return _translate_jobs.get(job_id)
 
 
+def cleanup_job(job_id: str) -> None:
+    """Remove a terminal-state job from memory."""
+    job = _translate_jobs.get(job_id)
+    if job and job["state"] in (
+        TranslateJobState.DONE,
+        TranslateJobState.FAILED,
+        TranslateJobState.CANCELED,
+    ):
+        del _translate_jobs[job_id]
+
+
+def _auto_purge_jobs() -> None:
+    """Auto-purge oldest completed jobs when dict exceeds 100 entries."""
+    if len(_translate_jobs) <= 100:
+        return
+    terminal = [
+        jid
+        for jid, j in _translate_jobs.items()
+        if j["state"] in (TranslateJobState.DONE, TranslateJobState.FAILED, TranslateJobState.CANCELED)
+    ]
+    for jid in terminal:
+        del _translate_jobs[jid]
+        if len(_translate_jobs) <= 100:
+            break
+
+
 # ── SSE generator ──────────────────────────────────────────────────
 
 async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
@@ -183,6 +212,7 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     if not model_id:
         yield {"type": "error", "job_id": job_id, "error": "No LLM model available"}
         job["state"] = TranslateJobState.FAILED
+        cleanup_job(job_id)
         return
 
     # Load model if needed
@@ -198,11 +228,13 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
         except Exception as e:
             yield {"type": "error", "job_id": job_id, "error": f"Failed to load LLM: {e}"}
             job["state"] = TranslateJobState.FAILED
+            cleanup_job(job_id)
             return
 
     if job["cancel_flag"]:
         job["state"] = TranslateJobState.CANCELED
         yield {"type": "cancelled", "job_id": job_id}
+        cleanup_job(job_id)
         return
 
     yield {
@@ -250,7 +282,8 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
 
             translated = ""
             if response and "choices" in response and len(response["choices"]) > 0:
-                translated = response["choices"][0].get("message", {}).get("content", "").strip()
+                content = response["choices"][0].get("message", {}).get("content") or ""
+                translated = content.strip()
 
             original = segments[i].get("text", "")
             result_entry = {
@@ -287,3 +320,6 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     except Exception as e:
         job["state"] = TranslateJobState.FAILED
         yield {"type": "error", "job_id": job_id, "error": str(e)}
+    finally:
+        cleanup_job(job_id)
+        _auto_purge_jobs()

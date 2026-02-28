@@ -1,141 +1,102 @@
-import { useState, useCallback } from "react";
-import { useTranslation } from "react-i18next";
-import type {
-  AppConfig,
-  PartialConfig,
-  SettingsTab,
-  GlossaryEntry,
-  ModelManifestEntry,
-} from "../../types";
-import { ProfileSection } from "./ProfileSection";
-import { OutputSection } from "./OutputSection";
-import { TranslationSection } from "./TranslationSection";
-import { ModelManager } from "./ModelManager";
-import { GlossaryEditor } from "./GlossaryEditor";
-import { ApiSettings } from "./ApiSettings";
-import { LanguageSection } from "./LanguageSection";
+import { useState } from "react"
+import { useTranslation } from "react-i18next"
+import {
+  Settings2,
+  FolderOpen,
+  HardDrive,
+  Gauge,
+  Monitor,
+  Info,
+} from "lucide-react"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { GeneralSection } from "./GeneralSection"
+import { PathsSection } from "./PathsSection"
+import { ModelsSection } from "./ModelsSection"
+import { PerformanceSection } from "./PerformanceSection"
+import { SystemSection } from "./SystemSection"
+import { AboutSection } from "./AboutSection"
+import type { AppConfig, PartialConfig, ModelManifestEntry, SettingsTab } from "@/types"
 
-const TABS: SettingsTab[] = [
-  "profile",
-  "output",
-  "translation",
-  "models",
-  "glossary",
-  "api",
-  "language",
-];
+const TABS: { value: SettingsTab; icon: typeof Settings2; labelKey: string }[] = [
+  { value: "general", icon: Settings2, labelKey: "settings.tabs.general" },
+  { value: "paths", icon: FolderOpen, labelKey: "settings.tabs.paths" },
+  { value: "models", icon: HardDrive, labelKey: "settings.tabs.models" },
+  { value: "performance", icon: Gauge, labelKey: "settings.tabs.performance" },
+  { value: "system", icon: Monitor, labelKey: "settings.tabs.system" },
+  { value: "about", icon: Info, labelKey: "settings.tabs.about" },
+]
 
 interface SettingsPageProps {
-  config: AppConfig;
-  manifest: ModelManifestEntry[];
-  glossaryEntries: GlossaryEntry[];
-  onUpdateConfig: (partial: PartialConfig) => void;
-  onSaveGlossary: (entries: GlossaryEntry[]) => void;
-  onDeleteModel: (id: string) => void;
-  onDownloadModel: (id: string) => void;
+  config: AppConfig
+  manifest: ModelManifestEntry[]
+  onUpdateConfig: (partial: PartialConfig) => void
+  onDeleteModel: (id: string) => void
+  onDownloadModel: (id: string) => void
 }
 
 export function SettingsPage({
   config,
   manifest,
-  glossaryEntries,
   onUpdateConfig,
-  onSaveGlossary,
   onDeleteModel,
   onDownloadModel,
 }: SettingsPageProps) {
-  const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<SettingsTab>("profile");
-
-  const handleConfigPatch = useCallback(
-    (patch: PartialConfig) => {
-      onUpdateConfig(patch);
-    },
-    [onUpdateConfig],
-  );
+  const { t } = useTranslation()
+  const [activeTab, setActiveTab] = useState<SettingsTab>("general")
 
   return (
-    <div className="flex gap-8">
+    <div className="flex gap-6 h-full">
       {/* Left sub-navigation */}
-      <nav className="flex w-44 flex-shrink-0 flex-col gap-1">
-        <h2 className="mb-4 text-lg font-bold text-slate-50">
-          {t("settings.title")}
-        </h2>
-        {TABS.map((tab) => (
-          <button
-            key={tab}
-            className={`cursor-pointer rounded-md px-3 py-2 text-left text-sm transition-colors ${
-              activeTab === tab
-                ? "bg-primary/15 font-medium text-primary"
-                : "text-slate-400 hover:bg-surface-hover hover:text-slate-200"
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {t(`settings.tabs.${tab}`)}
-          </button>
-        ))}
+      <nav className="flex w-48 flex-shrink-0 flex-col gap-1">
+        {TABS.map((tab) => {
+          const Icon = tab.icon
+          return (
+            <button
+              key={tab.value}
+              className={`flex items-center gap-2.5 cursor-pointer rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                activeTab === tab.value
+                  ? "bg-primary/10 font-medium text-primary"
+                  : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+              }`}
+              onClick={() => setActiveTab(tab.value)}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {t(tab.labelKey as never)}
+            </button>
+          )
+        })}
       </nav>
 
       {/* Right content */}
-      <div className="max-w-[600px] flex-1">
-        {activeTab === "profile" && (
-          <ProfileSection
-            profile={config.profile}
-            onChange={(p) => handleConfigPatch({ profile: p })}
-          />
-        )}
-        {activeTab === "output" && (
-          <OutputSection
-            outputDir={config.output_dir}
-            subtitleFormat={config.subtitle_format}
-            sourceLanguage={config.source_language}
-            targetLanguage={config.target_language}
-            onUpdate={handleConfigPatch}
-          />
-        )}
-        {activeTab === "translation" && (
-          <TranslationSection
-            mode={config.translation_mode}
-            contextWindow={config.context_window}
-            stylePreset={config.style_preset}
-            onUpdate={handleConfigPatch}
-          />
-        )}
-        {activeTab === "models" && (
-          <ModelManager
-            manifest={manifest}
-            activeWhisperModel={config.active_whisper_model}
-            activeLlmModel={config.active_llm_model}
-            onSelectActive={(type, id) => {
-              if (type === "whisper") {
-                handleConfigPatch({ active_whisper_model: id });
-              } else {
-                handleConfigPatch({ active_llm_model: id });
-              }
-            }}
-            onDelete={onDeleteModel}
-            onDownload={onDownloadModel}
-          />
-        )}
-        {activeTab === "glossary" && (
-          <GlossaryEditor
-            entries={glossaryEntries}
-            onSave={onSaveGlossary}
-          />
-        )}
-        {activeTab === "api" && (
-          <ApiSettings
-            config={config.external_api}
-            onUpdate={handleConfigPatch}
-          />
-        )}
-        {activeTab === "language" && (
-          <LanguageSection
-            currentLanguage={config.ui_language ?? "en"}
-            onChange={(lang) => handleConfigPatch({ ui_language: lang })}
-          />
-        )}
-      </div>
+      <ScrollArea className="flex-1">
+        <div className="max-w-[600px] pb-8">
+          {activeTab === "general" && (
+            <GeneralSection config={config} onUpdate={onUpdateConfig} />
+          )}
+          {activeTab === "paths" && (
+            <PathsSection config={config} onUpdate={onUpdateConfig} />
+          )}
+          {activeTab === "models" && (
+            <ModelsSection
+              manifest={manifest}
+              activeWhisperModel={config.active_whisper_model}
+              activeLlmModel={config.active_llm_model}
+              onUpdate={onUpdateConfig}
+              onDelete={onDeleteModel}
+              onDownload={onDownloadModel}
+            />
+          )}
+          {activeTab === "performance" && (
+            <PerformanceSection config={config} onUpdate={onUpdateConfig} />
+          )}
+          {activeTab === "system" && (
+            <SystemSection />
+          )}
+          {activeTab === "about" && (
+            <AboutSection />
+          )}
+        </div>
+      </ScrollArea>
     </div>
-  );
+  )
 }

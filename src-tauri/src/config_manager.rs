@@ -84,6 +84,15 @@ pub fn update_config(partial: PartialConfig, current: &mut AppConfig) -> Result<
     if let Some(v) = partial.active_llm_model {
         current.active_llm_model = v;
     }
+    if let Some(v) = partial.max_concurrent_jobs {
+        current.max_concurrent_jobs = v;
+    }
+    if let Some(v) = partial.gpu_acceleration {
+        current.gpu_acceleration = v;
+    }
+    if let Some(v) = partial.max_memory_mb {
+        current.max_memory_mb = v;
+    }
 
     save_config(current)
 }

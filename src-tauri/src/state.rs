@@ -105,6 +105,12 @@ pub struct AppConfig {
     pub ui_language: Option<String>,
     pub active_whisper_model: Option<String>,
     pub active_llm_model: Option<String>,
+    #[serde(default)]
+    pub max_concurrent_jobs: Option<u32>,
+    #[serde(default)]
+    pub gpu_acceleration: Option<bool>,
+    #[serde(default)]
+    pub max_memory_mb: Option<u32>,
 }
 
 impl Default for AppConfig {
@@ -128,6 +134,9 @@ impl Default for AppConfig {
             ui_language: None,
             active_whisper_model: None,
             active_llm_model: None,
+            max_concurrent_jobs: None,
+            gpu_acceleration: None,
+            max_memory_mb: None,
         }
     }
 }
@@ -158,6 +167,9 @@ pub struct PartialConfig {
     pub ui_language: Option<Option<String>>,
     pub active_whisper_model: Option<Option<String>>,
     pub active_llm_model: Option<Option<String>>,
+    pub max_concurrent_jobs: Option<Option<u32>>,
+    pub gpu_acceleration: Option<Option<bool>>,
+    pub max_memory_mb: Option<Option<u32>>,
 }
 
 // ── Glossary types ──
@@ -232,6 +244,53 @@ pub struct ResourceUsage {
     pub ram_total_mb: f64,
     pub vram_used_mb: Option<f64>,
     pub vram_total_mb: Option<f64>,
+}
+
+// ── Preset types ──
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum TranslationStyle {
+    Formal,
+    Casual,
+    Honorific,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VocabularyEntry {
+    pub id: String,
+    pub source: String,
+    pub target: String,
+    pub context: Option<String>,
+    pub note: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Vocabulary {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub source_lang: String,
+    pub target_lang: String,
+    pub entries: Vec<VocabularyEntry>,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Preset {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub whisper_model: String,
+    pub source_lang: String,
+    pub target_lang: String,
+    pub output_format: String,
+    pub translation_style: String,
+    pub llm_model: String,
+    pub vocabulary_id: Option<String>,
+    pub created_at: String,
+    pub updated_at: String,
 }
 
 // ── App State ──

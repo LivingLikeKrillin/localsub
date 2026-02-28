@@ -4,9 +4,95 @@
     "loading": "Loading..."
   },
   "nav": {
+    "dashboard": "Dashboard",
+    "editor": "Editor",
+    "presets": "Presets",
+    "settings": "Settings",
+    "theme": "Theme",
     "workspace": "Workspace",
-    "models": "Models",
-    "settings": "Settings"
+    "models": "Models"
+  },
+  "dashboard": {
+    "description": "Manage translation jobs",
+    "filter": {
+      "all": "All",
+      "processing": "Processing",
+      "pending": "Pending",
+      "completed": "Completed",
+      "failed": "Failed"
+    },
+    "table": {
+      "file": "File",
+      "preset": "Preset",
+      "status": "Status",
+      "progress": "Progress",
+      "created": "Created"
+    },
+    "empty": {
+      "title": "No jobs yet",
+      "description": "Create a new job to start processing subtitles."
+    },
+    "actions": {
+      "remove": "Remove"
+    },
+    "newJob": {
+      "button": "New Job",
+      "title": "New Job",
+      "description": "Upload files and select a preset to start processing.",
+      "dropzone": "Drag and drop files here, or click to browse",
+      "preset": "Preset",
+      "noPresets": "No presets available. Create one in the Presets page.",
+      "start": "Start job",
+      "startMultiple": "Start {{count}} jobs"
+    }
+  },
+  "editor": {
+    "description": "Subtitle editor",
+    "placeholder": "Select a completed job from Dashboard to edit subtitles.",
+    "empty": {
+      "title": "No subtitles loaded",
+      "description": "Select a completed job from the Dashboard to start editing."
+    },
+    "noSubtitles": "No subtitles to display.",
+    "selectToEdit": "Select a subtitle from the list to edit.",
+    "subtitlesCount": "subtitles",
+    "unsaved": "Unsaved changes",
+    "save": "Save",
+    "export": "Export",
+    "originalText": "Original Text",
+    "translatedText": "Translated Text",
+    "translationPlaceholder": "Enter translation...",
+    "status": {
+      "translated": "Translated",
+      "untranslated": "Untranslated",
+      "spell_error": "Error",
+      "editing": "Editing"
+    },
+    "stats": {
+      "chars": "Characters",
+      "duration": "Duration",
+      "cps": "Chars/sec"
+    }
+  },
+  "presets": {
+    "description": "Translation presets & vocabularies",
+    "placeholder": "Preset management coming soon.",
+    "tabs": {
+      "presets": "Job Presets",
+      "vocabularies": "Vocabularies"
+    },
+    "presetsDesc": "Presets combine STT, translation, and vocabulary settings into reusable configurations.",
+    "newPreset": "New Preset",
+    "emptyPresets": {
+      "title": "No presets yet",
+      "description": "Create your first preset to get started."
+    },
+    "vocabDesc": "Define how specific terms should be translated for consistency across jobs.",
+    "newVocab": "New Vocabulary",
+    "emptyVocab": {
+      "title": "No vocabularies yet",
+      "description": "Create a vocabulary dictionary to ensure consistent translations."
+    }
   },
   "server": {
     "title": "Python Server",
@@ -160,15 +246,31 @@
   },
   "settings": {
     "title": "Settings",
+    "description": "Application settings",
     "close": "Close",
     "tabs": {
-      "profile": "Profile",
-      "output": "Output",
-      "translation": "Translation",
+      "general": "General",
+      "paths": "Paths",
       "models": "Models",
-      "glossary": "Glossary",
-      "api": "External API",
-      "language": "Language"
+      "performance": "Performance",
+      "system": "System",
+      "about": "About"
+    },
+    "general": {
+      "title": "General Settings",
+      "description": "Language, output format, and translation preferences.",
+      "outputFormat": "Default Output Format",
+      "sourceLanguage": "Source Language",
+      "targetLanguage": "Target Language"
+    },
+    "paths": {
+      "title": "File Paths",
+      "description": "Configure where files are stored.",
+      "outputDir": "Output Directory",
+      "outputDirDesc": "Where exported subtitle files are saved.",
+      "modelDir": "Model Directory",
+      "modelDirDefault": "Default (AppData)",
+      "modelDirDesc": "Where AI models are stored on disk."
     },
     "profile": {
       "title": "Performance Profile",
@@ -176,6 +278,7 @@
       "hardwareTitle": "System Hardware",
       "detecting": "Detecting hardware...",
       "recommended": "Recommended",
+      "current": "Current",
       "lite": "Lite",
       "liteDesc": "CPU only. Smallest models, lowest resource usage.",
       "balanced": "Balanced",
@@ -183,8 +286,33 @@
       "power": "Power",
       "powerDesc": "Full GPU. Largest models, best quality."
     },
-    "output": {
-      "title": "Output Settings"
+    "performance": {
+      "title": "Performance",
+      "description": "Configure hardware utilization and resource limits.",
+      "gpuAcceleration": "GPU Acceleration",
+      "gpuAccelerationDesc": "Use GPU for faster model inference when available.",
+      "concurrentJobs": "Max Concurrent Jobs",
+      "concurrentJobsDesc": "Number of jobs that can run simultaneously.",
+      "maxMemory": "Max Memory Usage",
+      "maxMemoryDesc": "Limit memory used by AI models. 0 = unlimited.",
+      "unlimited": "Unlimited"
+    },
+    "system": {
+      "title": "System Information",
+      "description": "Detected hardware and system capabilities.",
+      "refresh": "Refresh",
+      "noData": "Hardware information not available. Click Refresh to detect."
+    },
+    "about": {
+      "title": "About",
+      "version": "Version",
+      "tagline": "AI-powered local subtitle translator",
+      "runtime": "Runtime",
+      "sttEngine": "STT Engine",
+      "llmEngine": "LLM Engine",
+      "license": "License",
+      "github": "GitHub Repository",
+      "reportIssue": "Report an Issue"
     },
     "translation": {
       "title": "Translation",
@@ -203,6 +331,7 @@
     },
     "models": {
       "title": "Installed Models",
+      "description": "Manage AI models for speech recognition and translation.",
       "empty": "No models installed.",
       "whisperSection": "Speech Recognition (Whisper)",
       "llmSection": "Translation (LLM)",
@@ -220,15 +349,6 @@
         "missing": "Missing",
         "corrupt": "Corrupt"
       }
-    },
-    "glossary": {
-      "title": "Glossary",
-      "addPair": "Add Pair",
-      "source": "Source term",
-      "target": "Translation",
-      "delete": "Delete",
-      "save": "Save",
-      "empty": "No glossary entries. Add pairs to customize translation."
     },
     "api": {
       "title": "External API",

@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Logo } from "../shared/Logo";
+import { SubTextLogo } from "../subtext-logo";
 
 interface StepWelcomeProps {
   onNext: () => void;
@@ -11,7 +11,7 @@ export function StepWelcome({ onNext, onSkip }: StepWelcomeProps) {
 
   return (
     <div className="text-center">
-      <Logo size={48} className="mx-auto mb-4" />
+      <SubTextLogo size="lg" className="mx-auto mb-4" />
       <h2 className="mb-4 text-2xl font-bold text-slate-50">
         {t("wizard.welcome.title")}
       </h2>

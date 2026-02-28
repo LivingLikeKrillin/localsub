@@ -7,6 +7,7 @@
 > | v1.1 | — | PyInstaller exe화 전략 추가 |
 > | v1.2 | 2026-02-27 | 실제 구현(내장 Python + 런타임 pip) 반영, NSIS 전환, 완비/미완 분류 추가 |
 > | v2.0 | 2026-02-27 | Phase 1 전면 개정: 기능 명세(FR/NFR) + 완료 조건 + 기술 결정사항 + 데이터 구조 + 8-Sprint 체크리스트 |
+> | v2.1 | 2026-02-28 | config.json에 active_whisper_model / active_llm_model 필드 추가 |
 
 ---
 
@@ -535,9 +536,20 @@ Phase 1은 **Local First** 전략으로 오프라인 동작을 보장하고, 외
     "provider": null,
     "model": null
   },
-  "model_dir": null
+  "model_dir": null,
+  "ui_language": null,
+  "active_whisper_model": null,
+  "active_llm_model": null
 }
 ```
+
+| 필드 | 타입 | 설명 |
+|------|------|------|
+| `active_whisper_model` | `string \| null` | 현재 사용할 Whisper 모델 ID (manifest의 id 값). null이면 미선택. |
+| `active_llm_model` | `string \| null` | 현재 사용할 LLM 모델 ID (manifest의 id 값). null이면 미선택. |
+
+> Settings → Models 탭에서 `status: "ready"` 상태인 모델 중 하나를 활성 모델로 선택할 수 있다.
+> 선택 시 `update_config({ active_whisper_model: "<id>" })` 호출로 config.json에 영속화된다.
 
 ### 6.3 manifest.json
 

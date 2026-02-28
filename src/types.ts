@@ -82,6 +82,9 @@ export interface AppConfig {
   ui_language: string | null;
   active_whisper_model: string | null;
   active_llm_model: string | null;
+  max_concurrent_jobs: number | null;
+  gpu_acceleration: boolean | null;
+  max_memory_mb: number | null;
 }
 
 export interface PartialConfig {
@@ -101,6 +104,9 @@ export interface PartialConfig {
   ui_language?: string | null;
   active_whisper_model?: string | null;
   active_llm_model?: string | null;
+  max_concurrent_jobs?: number | null;
+  gpu_acceleration?: boolean | null;
+  max_memory_mb?: number | null;
 }
 
 // ── Glossary types ──
@@ -140,19 +146,69 @@ export interface ModelCatalog {
   llm_models: LlmModelEntry[];
 }
 
+// ── New Job types ──
+
+export type JobStatus = "pending" | "processing" | "completed" | "failed";
+export type JobStage = "stt" | "translating" | "done" | "error";
+export type TranslationStyle = "formal" | "casual" | "honorific";
+export type Language = "ko" | "en" | "ja" | "zh";
+
+export interface VocabularyEntry {
+  id: string;
+  source: string;
+  target: string;
+  context?: string;
+  note?: string;
+}
+
+export interface Vocabulary {
+  id: string;
+  name: string;
+  description: string;
+  source_lang: string;
+  target_lang: string;
+  entries: VocabularyEntry[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Preset {
+  id: string;
+  name: string;
+  description: string;
+  whisper_model: string;
+  source_lang: string;
+  target_lang: string;
+  output_format: string;
+  translation_style: string;
+  llm_model: string;
+  vocabulary_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SubtitleLine {
+  id: string;
+  index: number;
+  start_time: number;
+  end_time: number;
+  original_text: string;
+  translated_text: string;
+  status: "translated" | "untranslated" | "spell_error" | "editing";
+}
+
 // ── Screen navigation ──
 
 export type AppScreen = "BOOT" | "WIZARD" | "SETUP" | "MAIN";
-export type MainPage = "workspace" | "models" | "settings";
+export type MainPage = "dashboard" | "editor" | "presets" | "settings";
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
 export type SettingsTab =
-  | "profile"
-  | "output"
-  | "translation"
+  | "general"
+  | "paths"
   | "models"
-  | "glossary"
-  | "api"
-  | "language";
+  | "performance"
+  | "system"
+  | "about";
 
 // ── Download tracking ──
 

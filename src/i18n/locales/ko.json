@@ -4,9 +4,95 @@
     "loading": "로딩 중..."
   },
   "nav": {
+    "dashboard": "작업 관리",
+    "editor": "자막 편집기",
+    "presets": "프리셋",
+    "settings": "설정",
+    "theme": "테마",
     "workspace": "작업 공간",
-    "models": "모델",
-    "settings": "설정"
+    "models": "모델"
+  },
+  "dashboard": {
+    "description": "번역 작업 관리",
+    "filter": {
+      "all": "전체",
+      "processing": "처리 중",
+      "pending": "대기 중",
+      "completed": "완료",
+      "failed": "실패"
+    },
+    "table": {
+      "file": "파일",
+      "preset": "프리셋",
+      "status": "상태",
+      "progress": "진행률",
+      "created": "생성 시간"
+    },
+    "empty": {
+      "title": "아직 작업이 없습니다",
+      "description": "새 작업을 만들어 자막 처리를 시작하세요."
+    },
+    "actions": {
+      "remove": "삭제"
+    },
+    "newJob": {
+      "button": "새 작업",
+      "title": "새 작업",
+      "description": "파일을 업로드하고 프리셋을 선택하여 처리를 시작하세요.",
+      "dropzone": "파일을 드래그 앤 드롭하거나 클릭하여 찾아보기",
+      "preset": "프리셋",
+      "noPresets": "사용 가능한 프리셋이 없습니다. 프리셋 페이지에서 만들어주세요.",
+      "start": "작업 시작",
+      "startMultiple": "{{count}}개 작업 시작"
+    }
+  },
+  "editor": {
+    "description": "자막 편집기",
+    "placeholder": "대시보드에서 완료된 작업을 선택하여 자막을 편집하세요.",
+    "empty": {
+      "title": "로드된 자막이 없습니다",
+      "description": "대시보드에서 완료된 작업을 선택하여 편집을 시작하세요."
+    },
+    "noSubtitles": "표시할 자막이 없습니다.",
+    "selectToEdit": "목록에서 자막을 선택하여 편집하세요.",
+    "subtitlesCount": "자막",
+    "unsaved": "저장되지 않은 변경사항",
+    "save": "저장",
+    "export": "내보내기",
+    "originalText": "원본 텍스트",
+    "translatedText": "번역 텍스트",
+    "translationPlaceholder": "번역을 입력하세요...",
+    "status": {
+      "translated": "번역됨",
+      "untranslated": "미번역",
+      "spell_error": "오류",
+      "editing": "편집 중"
+    },
+    "stats": {
+      "chars": "글자 수",
+      "duration": "길이",
+      "cps": "글자/초"
+    }
+  },
+  "presets": {
+    "description": "번역 프리셋 & 용어사전",
+    "placeholder": "프리셋 관리 기능이 곧 제공됩니다.",
+    "tabs": {
+      "presets": "작업 프리셋",
+      "vocabularies": "용어사전"
+    },
+    "presetsDesc": "STT, 번역, 용어사전 설정을 재사용 가능한 구성으로 결합합니다.",
+    "newPreset": "새 프리셋",
+    "emptyPresets": {
+      "title": "프리셋이 없습니다",
+      "description": "첫 번째 프리셋을 만들어 시작하세요."
+    },
+    "vocabDesc": "작업 전반에서 일관된 번역을 위해 특정 용어의 번역 방법을 정의합니다.",
+    "newVocab": "새 용어사전",
+    "emptyVocab": {
+      "title": "용어사전이 없습니다",
+      "description": "일관된 번역을 위해 용어사전을 만드세요."
+    }
   },
   "server": {
     "title": "Python 서버",
@@ -160,15 +246,31 @@
   },
   "settings": {
     "title": "설정",
+    "description": "애플리케이션 설정",
     "close": "닫기",
     "tabs": {
-      "profile": "프로필",
-      "output": "출력",
-      "translation": "번역",
+      "general": "일반",
+      "paths": "경로",
       "models": "모델",
-      "glossary": "용어집",
-      "api": "외부 API",
-      "language": "언어"
+      "performance": "성능",
+      "system": "시스템",
+      "about": "정보"
+    },
+    "general": {
+      "title": "일반 설정",
+      "description": "언어, 출력 형식, 번역 설정을 구성합니다.",
+      "outputFormat": "기본 출력 형식",
+      "sourceLanguage": "원본 언어",
+      "targetLanguage": "번역 언어"
+    },
+    "paths": {
+      "title": "파일 경로",
+      "description": "파일 저장 위치를 설정합니다.",
+      "outputDir": "출력 폴더",
+      "outputDirDesc": "내보낸 자막 파일이 저장되는 위치입니다.",
+      "modelDir": "모델 폴더",
+      "modelDirDefault": "기본값 (AppData)",
+      "modelDirDesc": "AI 모델이 저장되는 디스크 위치입니다."
     },
     "profile": {
       "title": "성능 프로필",
@@ -176,6 +278,7 @@
       "hardwareTitle": "시스템 하드웨어",
       "detecting": "하드웨어 감지 중...",
       "recommended": "추천",
+      "current": "현재",
       "lite": "Lite",
       "liteDesc": "CPU 전용. 가장 작은 모델, 최소 리소스 사용.",
       "balanced": "Balanced",
@@ -183,8 +286,33 @@
       "power": "Power",
       "powerDesc": "전체 GPU. 가장 큰 모델, 최고 품질."
     },
-    "output": {
-      "title": "출력 설정"
+    "performance": {
+      "title": "성능",
+      "description": "하드웨어 활용 및 리소스 제한을 설정합니다.",
+      "gpuAcceleration": "GPU 가속",
+      "gpuAccelerationDesc": "가능한 경우 GPU를 사용하여 모델 추론을 가속합니다.",
+      "concurrentJobs": "최대 동시 작업 수",
+      "concurrentJobsDesc": "동시에 실행할 수 있는 작업 수입니다.",
+      "maxMemory": "최대 메모리 사용량",
+      "maxMemoryDesc": "AI 모델이 사용하는 메모리를 제한합니다. 0 = 무제한.",
+      "unlimited": "무제한"
+    },
+    "system": {
+      "title": "시스템 정보",
+      "description": "감지된 하드웨어 및 시스템 기능입니다.",
+      "refresh": "새로고침",
+      "noData": "하드웨어 정보를 사용할 수 없습니다. 새로고침을 클릭하여 감지하세요."
+    },
+    "about": {
+      "title": "정보",
+      "version": "버전",
+      "tagline": "AI 기반 로컬 자막 번역기",
+      "runtime": "런타임",
+      "sttEngine": "STT 엔진",
+      "llmEngine": "LLM 엔진",
+      "license": "라이선스",
+      "github": "GitHub 저장소",
+      "reportIssue": "문제 보고"
     },
     "translation": {
       "title": "번역",
@@ -203,6 +331,7 @@
     },
     "models": {
       "title": "설치된 모델",
+      "description": "음성 인식 및 번역을 위한 AI 모델을 관리합니다.",
       "empty": "설치된 모델이 없습니다.",
       "whisperSection": "음성 인식 (Whisper)",
       "llmSection": "번역 (LLM)",
@@ -220,15 +349,6 @@
         "missing": "없음",
         "corrupt": "손상됨"
       }
-    },
-    "glossary": {
-      "title": "용어집",
-      "addPair": "쌍 추가",
-      "source": "원어",
-      "target": "번역어",
-      "delete": "삭제",
-      "save": "저장",
-      "empty": "용어집 항목이 없습니다. 번역을 맞춤 설정하려면 쌍을 추가하세요."
     },
     "api": {
       "title": "외부 API",

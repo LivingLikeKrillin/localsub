@@ -13,6 +13,9 @@ import type {
   ModelManifest,
   SttSegment,
   RuntimeStatus,
+  Preset,
+  Vocabulary,
+  SubtitleLine,
 } from "../types";
 
 export async function startServer(): Promise<void> {
@@ -206,4 +209,50 @@ export async function pickFile(
   } catch {
     return null;
   }
+}
+
+// ── Preset commands ──
+
+export async function getPresets(): Promise<Preset[]> {
+  return invoke("get_presets");
+}
+
+export async function addPreset(preset: Preset): Promise<Preset[]> {
+  return invoke("add_preset", { preset });
+}
+
+export async function updatePreset(preset: Preset): Promise<Preset[]> {
+  return invoke("update_preset", { preset });
+}
+
+export async function removePreset(id: string): Promise<Preset[]> {
+  return invoke("remove_preset", { id });
+}
+
+// ── Vocabulary commands ──
+
+export async function getVocabularies(): Promise<Vocabulary[]> {
+  return invoke("get_vocabularies");
+}
+
+export async function addVocabulary(vocabulary: Vocabulary): Promise<Vocabulary[]> {
+  return invoke("add_vocabulary", { vocabulary });
+}
+
+export async function updateVocabulary(vocabulary: Vocabulary): Promise<Vocabulary[]> {
+  return invoke("update_vocabulary", { vocabulary });
+}
+
+export async function removeVocabulary(id: string): Promise<Vocabulary[]> {
+  return invoke("remove_vocabulary", { id });
+}
+
+// ── Subtitle commands ──
+
+export async function loadJobSubtitles(jobId: string): Promise<SubtitleLine[]> {
+  return invoke("load_job_subtitles", { jobId });
+}
+
+export async function saveJobSubtitles(jobId: string, lines: SubtitleLine[]): Promise<void> {
+  return invoke("save_job_subtitles", { jobId, lines });
 }

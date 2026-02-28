@@ -194,7 +194,7 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
             "message": "Loading LLM model...",
         }
         try:
-            await asyncio.get_event_loop().run_in_executor(None, load_model, model_id)
+            await asyncio.get_running_loop().run_in_executor(None, load_model, model_id)
         except Exception as e:
             yield {"type": "error", "job_id": job_id, "error": f"Failed to load LLM: {e}"}
             job["state"] = TranslateJobState.FAILED
@@ -222,7 +222,7 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     all_results: list[dict[str, Any]] = []
 
     try:
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         for i in range(total):
             if job["cancel_flag"]:

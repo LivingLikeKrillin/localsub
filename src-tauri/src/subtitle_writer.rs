@@ -1,17 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use serde::Deserialize;
-
-/// A merged segment ready for export.
-#[derive(Debug, Clone, Deserialize)]
-pub struct ExportSegment {
-    pub index: u32,
-    pub start: f64,
-    pub end: f64,
-    pub text: String,
-    pub translated: Option<String>,
-}
+use crate::contracts::SubtitleSegment;
 
 // ── Timestamp helpers ────────────────────────────────────────────
 
@@ -44,7 +34,7 @@ fn ts_ass(secs: f64) -> String {
 
 // ── Formatters ───────────────────────────────────────────────────
 
-pub fn format_srt(segments: &[ExportSegment]) -> String {
+pub fn format_srt(segments: &[SubtitleSegment]) -> String {
     let mut lines: Vec<String> = Vec::new();
     for (i, seg) in segments.iter().enumerate() {
         let idx = i + 1;
@@ -62,7 +52,7 @@ pub fn format_srt(segments: &[ExportSegment]) -> String {
     lines.join("\n")
 }
 
-pub fn format_vtt(segments: &[ExportSegment]) -> String {
+pub fn format_vtt(segments: &[SubtitleSegment]) -> String {
     let mut lines: Vec<String> = vec!["WEBVTT".to_string(), String::new()];
     for (i, seg) in segments.iter().enumerate() {
         let idx = i + 1;
@@ -80,7 +70,7 @@ pub fn format_vtt(segments: &[ExportSegment]) -> String {
     lines.join("\n")
 }
 
-pub fn format_ass(segments: &[ExportSegment]) -> String {
+pub fn format_ass(segments: &[SubtitleSegment]) -> String {
     let header = "[Script Info]\n\
         Title: SubText Export\n\
         ScriptType: v4.00+\n\
@@ -117,7 +107,7 @@ pub fn format_ass(segments: &[ExportSegment]) -> String {
     lines.join("\n")
 }
 
-pub fn format_txt(segments: &[ExportSegment]) -> String {
+pub fn format_txt(segments: &[SubtitleSegment]) -> String {
     let mut lines: Vec<String> = Vec::new();
     for seg in segments {
         lines.push(seg.text.trim().to_string());
@@ -132,7 +122,7 @@ pub fn format_txt(segments: &[ExportSegment]) -> String {
 }
 
 /// Unified entry point — dispatches to format-specific function.
-pub fn format_subtitles(segments: &[ExportSegment], fmt: &str) -> String {
+pub fn format_subtitles(segments: &[SubtitleSegment], fmt: &str) -> String {
     match fmt.to_lowercase().as_str() {
         "vtt" => format_vtt(segments),
         "ass" => format_ass(segments),
@@ -155,16 +145,16 @@ pub fn write_subtitle_file(content: &str, path: &Path) -> Result<(), std::io::Er
 mod tests {
     use super::*;
 
-    fn sample_segments() -> Vec<ExportSegment> {
+    fn sample_segments() -> Vec<SubtitleSegment> {
         vec![
-            ExportSegment {
+            SubtitleSegment {
                 index: 0,
                 start: 0.0,
                 end: 2.5,
                 text: "Hello world".to_string(),
                 translated: Some("안녕하세요".to_string()),
             },
-            ExportSegment {
+            SubtitleSegment {
                 index: 1,
                 start: 3.0,
                 end: 5.0,

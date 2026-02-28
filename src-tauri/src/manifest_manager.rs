@@ -1,10 +1,11 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::AppError;
 use crate::state::AppConfig;
+use crate::utils;
 
 const MANIFEST_FILENAME: &str = "manifest.json";
 
@@ -48,19 +49,13 @@ fn chrono_now() -> String {
     format!("{}", secs)
 }
 
-fn app_data_dir() -> Result<PathBuf, AppError> {
-    let base = dirs::config_dir()
-        .ok_or_else(|| AppError::Config("Cannot determine app data directory".into()))?;
-    Ok(base.join("com.subtext.app"))
-}
-
 pub fn models_dir(config: &AppConfig) -> Result<PathBuf, AppError> {
     if let Some(ref custom) = config.model_dir {
         if !custom.is_empty() {
             return Ok(PathBuf::from(custom));
         }
     }
-    Ok(app_data_dir()?.join("models"))
+    Ok(utils::app_data_dir()?.join("models"))
 }
 
 pub fn manifest_path(config: &AppConfig) -> Result<PathBuf, AppError> {
@@ -82,7 +77,7 @@ pub fn load_manifest(config: &AppConfig) -> Result<ModelManifest, AppError> {
 
 pub fn save_manifest(config: &AppConfig, manifest: &ModelManifest) -> Result<(), AppError> {
     let path = manifest_path(config)?;
-    atomic_write(&path, manifest)
+    utils::atomic_write(&path, manifest)
 }
 
 pub fn upsert_entry(manifest: &mut ModelManifest, entry: ModelManifestEntry) {
@@ -116,28 +111,10 @@ pub fn check_integrity(config: &AppConfig) -> Result<ModelManifest, AppError> {
     Ok(manifest)
 }
 
-fn atomic_write<T: serde::Serialize + ?Sized>(path: &Path, data: &T) -> Result<(), AppError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| AppError::Download(format!("Failed to create directory: {}", e)))?;
-    }
-
-    let tmp_path = path.with_extension("tmp");
-    let json = serde_json::to_string_pretty(data)
-        .map_err(|e| AppError::Download(format!("Failed to serialize manifest: {}", e)))?;
-
-    fs::write(&tmp_path, &json)
-        .map_err(|e| AppError::Download(format!("Failed to write tmp file: {}", e)))?;
-
-    fs::rename(&tmp_path, path)
-        .map_err(|e| AppError::Download(format!("Failed to rename tmp to final: {}", e)))?;
-
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
     use crate::state::AppConfig;
 
     fn test_config(dir: &Path) -> AppConfig {

@@ -1,25 +1,16 @@
 use std::path::PathBuf;
 
-use serde::Deserialize;
 use tauri::State;
 
+use crate::contracts::SubtitleSegment;
 use crate::error::AppError;
-use crate::subtitle_writer::{self, ExportSegment};
+use crate::subtitle_writer;
 use crate::state::SharedState;
-
-#[derive(Debug, Deserialize)]
-pub struct ExportSegmentInput {
-    pub index: u32,
-    pub start: f64,
-    pub end: f64,
-    pub text: String,
-    pub translated: Option<String>,
-}
 
 #[tauri::command]
 pub async fn export_subtitles(
     _state: State<'_, SharedState>,
-    segments: Vec<ExportSegmentInput>,
+    segments: Vec<SubtitleSegment>,
     format: String,
     output_dir: String,
     file_name: String,
@@ -30,21 +21,9 @@ pub async fn export_subtitles(
         ));
     }
 
-    // Convert input to ExportSegment
-    let export_segments: Vec<ExportSegment> = segments
-        .into_iter()
-        .map(|s| ExportSegment {
-            index: s.index,
-            start: s.start,
-            end: s.end,
-            text: s.text,
-            translated: s.translated,
-        })
-        .collect();
-
     // Format subtitles
     let fmt = format.to_lowercase();
-    let content = subtitle_writer::format_subtitles(&export_segments, &fmt);
+    let content = subtitle_writer::format_subtitles(&segments, &fmt);
 
     // Determine extension
     let ext = match fmt.as_str() {

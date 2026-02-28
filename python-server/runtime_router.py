@@ -64,14 +64,17 @@ async def get_status():
 
 @router.post("/load", response_model=LoadResponse)
 async def load_model(req: LoadRequest):
-    loop = asyncio.get_event_loop()
+    if req.model_type not in ("whisper", "llm"):
+        raise HTTPException(status_code=400, detail=f"Unknown model_type: {req.model_type}")
+
+    loop = asyncio.get_running_loop()
     try:
         if req.model_type == "whisper":
             await loop.run_in_executor(None, stt_engine.load_model, req.model_id)
-        elif req.model_type == "llm":
-            await loop.run_in_executor(None, llm_engine.load_model, req.model_id)
         else:
-            raise HTTPException(status_code=400, detail=f"Unknown model_type: {req.model_type}")
+            await loop.run_in_executor(None, llm_engine.load_model, req.model_id)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

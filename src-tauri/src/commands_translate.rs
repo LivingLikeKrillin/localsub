@@ -1,25 +1,18 @@
 use tauri::{AppHandle, Emitter, State};
 
 use crate::config_manager;
+use crate::contracts::SubtitleSegment;
 use crate::error::AppError;
 use crate::job::Job;
 use crate::manifest_manager;
 use crate::sse_client;
 use crate::state::{GlossaryEntry, ServerStatus, SharedState};
 
-#[derive(Debug, Clone, serde::Deserialize)]
-pub struct SttSegmentInput {
-    pub index: u32,
-    pub start: f64,
-    pub end: f64,
-    pub text: String,
-}
-
 #[tauri::command]
 pub async fn start_translate(
     app: AppHandle,
     state: State<'_, SharedState>,
-    segments: Vec<SttSegmentInput>,
+    segments: Vec<SubtitleSegment>,
 ) -> Result<Job, AppError> {
     let (port, config) = {
         let s = state.lock().map_err(|e| {

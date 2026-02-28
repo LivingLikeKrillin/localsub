@@ -1,23 +1,18 @@
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use crate::error::AppError;
 use crate::state::{AppConfig, GlossaryEntry, PartialConfig};
+use crate::utils;
 
 const CONFIG_FILENAME: &str = "config.json";
 
-fn app_data_dir() -> Result<PathBuf, AppError> {
-    let base = dirs::config_dir()
-        .ok_or_else(|| AppError::Config("Cannot determine app data directory".into()))?;
-    Ok(base.join("com.subtext.app"))
-}
-
 pub fn config_path() -> Result<PathBuf, AppError> {
-    Ok(app_data_dir()?.join(CONFIG_FILENAME))
+    Ok(utils::app_data_dir()?.join(CONFIG_FILENAME))
 }
 
 fn glossary_dir() -> Result<PathBuf, AppError> {
-    Ok(app_data_dir()?.join("glossaries"))
+    Ok(utils::app_data_dir()?.join("glossaries"))
 }
 
 pub fn load_config() -> Result<AppConfig, AppError> {
@@ -37,7 +32,7 @@ pub fn load_config() -> Result<AppConfig, AppError> {
 
 pub fn save_config(config: &AppConfig) -> Result<(), AppError> {
     let path = config_path()?;
-    atomic_write(&path, config)
+    utils::atomic_write(&path, config)
 }
 
 pub fn update_config(partial: PartialConfig, current: &mut AppConfig) -> Result<(), AppError> {
@@ -109,32 +104,13 @@ pub fn save_glossary(name: &str, entries: &[GlossaryEntry]) -> Result<(), AppErr
 
     let filename = sanitize_filename(name);
     let path = dir.join(format!("{}.json", filename));
-    atomic_write(&path, entries)
+    utils::atomic_write(&path, entries)
 }
 
 fn sanitize_filename(name: &str) -> String {
     name.chars()
         .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' { c } else { '_' })
         .collect()
-}
-
-fn atomic_write<T: serde::Serialize + ?Sized>(path: &Path, data: &T) -> Result<(), AppError> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)
-            .map_err(|e| AppError::Config(format!("Failed to create directory: {}", e)))?;
-    }
-
-    let tmp_path = path.with_extension("tmp");
-    let json = serde_json::to_string_pretty(data)
-        .map_err(|e| AppError::Config(format!("Failed to serialize: {}", e)))?;
-
-    fs::write(&tmp_path, &json)
-        .map_err(|e| AppError::Config(format!("Failed to write tmp file: {}", e)))?;
-
-    fs::rename(&tmp_path, path)
-        .map_err(|e| AppError::Config(format!("Failed to rename tmp to final: {}", e)))?;
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -205,7 +181,7 @@ mod tests {
 
         let path = dir.join("test_config.json");
         let config = AppConfig::default();
-        atomic_write(&path, &config).unwrap();
+        crate::utils::atomic_write(&path, &config).unwrap();
 
         assert!(path.exists());
         assert!(!path.with_extension("tmp").exists());

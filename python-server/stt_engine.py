@@ -154,7 +154,7 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
             "message": "Loading Whisper model...",
         }
         try:
-            await asyncio.get_event_loop().run_in_executor(None, load_model, model_id)
+            await asyncio.get_running_loop().run_in_executor(None, load_model, model_id)
         except Exception as e:
             yield {"type": "error", "job_id": job_id, "error": f"Failed to load model: {e}"}
             job["state"] = SttJobState.FAILED
@@ -179,7 +179,7 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
         lang_arg = language if language and language != "auto" else None
 
         # Run transcribe in executor to avoid blocking the event loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         segments_iter, info = await loop.run_in_executor(
             None,
             lambda: _model.transcribe(

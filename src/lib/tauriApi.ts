@@ -182,11 +182,15 @@ export async function unloadRuntimeModel(modelType: string): Promise<void> {
   await invoke("unload_runtime_model", { modelType });
 }
 
-// ── Dialog helpers (until @tauri-apps/plugin-dialog is installed) ──
+// ── Dialog helpers ──
+
+import { open } from "@tauri-apps/plugin-dialog";
 
 export async function pickDirectory(): Promise<string | null> {
   try {
-    return await invoke<string | null>("pick_directory");
+    const result = await open({ directory: true, multiple: false });
+    if (Array.isArray(result)) return result[0] ?? null;
+    return result;
   } catch {
     return null;
   }
@@ -196,7 +200,9 @@ export async function pickFile(
   filters: { name: string; extensions: string[] }[],
 ): Promise<string | null> {
   try {
-    return await invoke<string | null>("pick_file", { filters });
+    const result = await open({ filters, multiple: false });
+    if (Array.isArray(result)) return result[0] ?? null;
+    return result;
   } catch {
     return null;
   }

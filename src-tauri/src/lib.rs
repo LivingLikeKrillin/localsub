@@ -7,6 +7,7 @@ mod commands_stt;
 mod commands_translate;
 mod commands_wizard;
 mod config_manager;
+mod contracts;
 mod error;
 mod hw_detector;
 mod job;
@@ -17,6 +18,7 @@ mod setup_manager;
 mod sse_client;
 mod state;
 mod subtitle_writer;
+mod utils;
 
 use tauri::Manager;
 

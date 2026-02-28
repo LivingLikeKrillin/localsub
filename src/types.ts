@@ -2,7 +2,7 @@ export type ServerStatus = "STOPPED" | "STARTING" | "RUNNING" | "ERROR";
 
 export type SetupStatus = "CHECKING" | "NEEDED" | "IN_PROGRESS" | "COMPLETE" | "ERROR";
 
-export type SetupStage = "pip" | "requirements" | "complete";
+export type SetupStage = "pip" | "requirements" | "llm" | "complete";
 
 export interface SetupProgress {
   stage: SetupStage;

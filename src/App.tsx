@@ -140,7 +140,7 @@ function App() {
   if (screen === "BOOT") {
     return (
       <ThemeProvider defaultTheme="dark">
-        <div className="flex min-h-screen items-center justify-center">
+        <div className="flex h-full items-center justify-center">
           <div className="flex items-center gap-2.5 text-muted-foreground">
             <span className="spinner" />
             <span>{t("app.loading")}</span>

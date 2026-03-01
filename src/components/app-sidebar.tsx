@@ -7,6 +7,7 @@ import {
   Sun,
   Moon,
   Monitor,
+  ChevronsLeft,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { SubTextLogo } from "@/components/subtext-logo"
@@ -20,6 +21,7 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarSeparator,
+  useSidebar,
 } from "@/components/ui/sidebar"
 import {
   DropdownMenu,
@@ -52,19 +54,30 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const { t } = useTranslation()
   const { setTheme, theme } = useTheme()
+  const { toggleSidebar, state } = useSidebar()
+  const collapsed = state === "collapsed"
 
   return (
     <Sidebar collapsible="icon" variant="sidebar">
-      <SidebarHeader className="p-4">
-        <button
-          onClick={() => onNavigate("dashboard")}
-          className="flex items-center gap-2.5 group-data-[collapsible=icon]:justify-center"
-        >
-          <SubTextLogo size="sm" />
-          <span className="text-lg font-semibold tracking-tight group-data-[collapsible=icon]:hidden">
+      <SidebarHeader className="p-2">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => collapsed ? toggleSidebar() : onNavigate("dashboard")}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-sidebar-accent transition-colors"
+            title={collapsed ? "Expand sidebar" : "SubText"}
+          >
+            <SubTextLogo size="sm" />
+          </button>
+          <span className="text-lg font-semibold tracking-tight whitespace-nowrap transition-opacity duration-300 ease-in-out group-data-[collapsible=icon]:opacity-0">
             SubText
           </span>
-        </button>
+          <button
+            onClick={toggleSidebar}
+            className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-opacity duration-300 ease-in-out group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:pointer-events-none"
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
+        </div>
       </SidebarHeader>
 
       <SidebarSeparator />
@@ -98,11 +111,11 @@ export function AppSidebar({
         <SidebarSeparator />
 
         {/* System status chip */}
-        <div className="flex items-center gap-2 px-2 py-1.5 group-data-[collapsible=icon]:justify-center">
+        <div className="flex items-center gap-2 px-2 py-1.5">
           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted">
             <Cpu className="h-3 w-3 text-muted-foreground" />
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap transition-opacity duration-300 ease-in-out group-data-[collapsible=icon]:opacity-0">
             {hardwareInfo?.gpu ? (
               <>
                 <span className="h-1.5 w-1.5 rounded-full bg-status-success" />

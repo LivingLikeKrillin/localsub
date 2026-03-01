@@ -8,7 +8,6 @@ import {
   Monitor,
   Info,
 } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { GeneralSection } from "./GeneralSection"
 import { PathsSection } from "./PathsSection"
 import { ModelsSection } from "./ModelsSection"
@@ -45,9 +44,9 @@ export function SettingsPage({
   const [activeTab, setActiveTab] = useState<SettingsTab>("general")
 
   return (
-    <div className="flex gap-6 h-full">
+    <div className="flex gap-4 h-full">
       {/* Left sub-navigation */}
-      <nav className="flex w-48 flex-shrink-0 flex-col gap-1">
+      <nav className="flex w-36 flex-shrink-0 flex-col gap-1">
         {TABS.map((tab) => {
           const Icon = tab.icon
           return (
@@ -68,7 +67,7 @@ export function SettingsPage({
       </nav>
 
       {/* Right content */}
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto min-w-0 px-1">
         <div className="max-w-[600px] pb-8">
           {activeTab === "general" && (
             <GeneralSection config={config} onUpdate={onUpdateConfig} />
@@ -96,7 +95,7 @@ export function SettingsPage({
             <AboutSection />
           )}
         </div>
-      </ScrollArea>
+      </div>
     </div>
   )
 }

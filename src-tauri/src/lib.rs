@@ -38,6 +38,18 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(SharedState::new(AppState::default()))
+        .setup(|app| {
+            if let Some(window) = app.get_webview_window("main") {
+                let png_bytes = include_bytes!("../icons/128x128@2x.png");
+                let img = image::load_from_memory(png_bytes)
+                    .expect("Failed to decode icon");
+                let rgba = img.to_rgba8();
+                let (w, h) = rgba.dimensions();
+                let icon = tauri::image::Image::new_owned(rgba.into_raw(), w, h);
+                let _ = window.set_icon(icon);
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             // Existing commands
             commands::check_setup,

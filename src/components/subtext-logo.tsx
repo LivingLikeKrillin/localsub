@@ -7,48 +7,22 @@ interface SubTextLogoProps {
 
 export function SubTextLogo({ size = "md", className }: SubTextLogoProps) {
   const sizeMap = {
-    sm: "h-8 w-8 rounded-lg",
-    md: "h-9 w-9 rounded-[10px]",
-    lg: "h-12 w-12 rounded-xl",
+    sm: "h-8 w-8",
+    md: "h-9 w-9",
+    lg: "h-12 w-12",
   }
 
   return (
-    <div
-      className={cn(
-        "shrink-0 bg-primary",
-        sizeMap[size],
-        className
-      )}
+    <svg
+      viewBox="0 0 48 48"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="SubText"
+      className={cn("shrink-0 text-primary", sizeMap[size], className)}
     >
-      <svg
-        viewBox="0 0 48 48"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-full w-full"
-        aria-hidden="true"
-      >
-        {/* Monitor frame */}
-        <rect
-          x="7" y="8" width="34" height="24" rx="2.5"
-          stroke="white" strokeWidth="3" fill="none"
-        />
-
-        {/* SUB text - bold, centered in screen */}
-        <text
-          x="24" y="22"
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="white"
-          fontFamily="system-ui, -apple-system, sans-serif"
-          fontWeight="800"
-          fontSize="11"
-          letterSpacing="0.5"
-        >SUB</text>
-
-        {/* Subtitle lines below screen */}
-        <rect x="12" y="36" width="20" height="2.5" rx="1.25" fill="white" />
-        <rect x="15" y="40.5" width="14" height="2" rx="1" fill="white" opacity="0.5" />
-      </svg>
-    </div>
+      <path
+        fill="currentColor"
+        d="M44,6H4A2,2,0,0,0,2,8V40a2,2,0,0,0,2,2H44a2,2,0,0,0,2-2V8A2,2,0,0,0,44,6ZM12,26h4a2,2,0,0,1,0,4H12a2,2,0,0,1,0-4ZM26,36H12a2,2,0,0,1,0-4H26a2,2,0,0,1,0,4Zm10,0H32a2,2,0,0,1,0-4h4a2,2,0,0,1,0,4Zm0-6H22a2,2,0,0,1,0-4H36a2,2,0,0,1,0,4Z"
+      />
+    </svg>
   )
 }

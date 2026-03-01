@@ -38,10 +38,16 @@
   --status-info: 220 90% 50%;
   --status-info-foreground: 0 0% 100%;
 
-  --waveform: 220 90% 50%;
-  --waveform-bg: 220 14% 96%;
-  --playhead: 0 72% 51%;
-  --subtitle-highlight: 220 90% 95%;
+  --waveform: 245 60% 55%;
+  --waveform-bg: 0 0% 97%;
+  --playhead: 0 80% 50%;
+  --subtitle-highlight: 245 70% 55%;
+  --waveform-grid: 220 10% 85%;
+  --waveform-label: 220 10% 60%;
+  --waveform-block: 220 15% 65%;
+  --waveform-block-active: 245 50% 55%;
+  --waveform-block-border: 245 70% 50%;
+  --waveform-text: 0 0% 25%;
 
   --chart-1: 220 90% 50%;
   --chart-2: 142 71% 45%;
@@ -90,10 +96,16 @@
   --status-info: 217 91% 60%;
   --status-info-foreground: 0 0% 100%;
 
-  --waveform: 217 91% 60%;
-  --waveform-bg: 220 16% 12%;
-  --playhead: 0 62% 50%;
-  --subtitle-highlight: 217 91% 15%;
+  --waveform: 245 60% 55%;
+  --waveform-bg: 220 16% 8%;
+  --playhead: 0 80% 60%;
+  --subtitle-highlight: 245 70% 55%;
+  --waveform-grid: 220 10% 20%;
+  --waveform-label: 220 10% 40%;
+  --waveform-block: 220 15% 35%;
+  --waveform-block-active: 245 50% 45%;
+  --waveform-block-border: 245 70% 60%;
+  --waveform-text: 0 0% 85%;
 
   --chart-1: 217 91% 60%;
   --chart-2: 142 71% 45%;
@@ -150,6 +162,12 @@
   --color-waveform-bg: hsl(var(--waveform-bg));
   --color-waveform-playhead: hsl(var(--playhead));
   --color-waveform-highlight: hsl(var(--subtitle-highlight));
+  --color-waveform-grid: hsl(var(--waveform-grid));
+  --color-waveform-label: hsl(var(--waveform-label));
+  --color-waveform-block: hsl(var(--waveform-block));
+  --color-waveform-block-active: hsl(var(--waveform-block-active));
+  --color-waveform-block-border: hsl(var(--waveform-block-border));
+  --color-waveform-text: hsl(var(--waveform-text));
 
   --color-chart-1: hsl(var(--chart-1));
   --color-chart-2: hsl(var(--chart-2));
@@ -184,13 +202,18 @@
   border-color: hsl(var(--border));
 }
 
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
 body {
   font-family: var(--font-sans);
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  min-height: 100vh;
 }
 
 .spinner {

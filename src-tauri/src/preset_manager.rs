@@ -69,6 +69,7 @@ mod tests {
             translation_style: "formal".to_string(),
             llm_model: "qwen3-7b".to_string(),
             vocabulary_id: None,
+            is_default: None,
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
         }

@@ -265,7 +265,7 @@ function PresetDialog({
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh]">
-          <div className="flex flex-col gap-4 py-2 pr-2">
+          <div className="flex flex-col gap-4 py-2 px-1">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="preset-name">Name</Label>
               <Input id="preset-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Korean to English (Formal)" />
@@ -451,7 +451,7 @@ function VocabDialog({
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh]">
-          <div className="flex flex-col gap-4 py-2 pr-2">
+          <div className="flex flex-col gap-4 py-2 px-1">
             <div className="grid grid-cols-2 gap-3">
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="vocab-name">Name</Label>
@@ -638,14 +638,14 @@ export function PresetsPage({
           </TabsList>
         </div>
 
-        <TabsContent value="presets" className="flex-1 mt-0 pt-4">
+        <TabsContent value="presets" className="flex flex-col flex-1 mt-0 pt-4">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground">
               {t("presets.presetsDesc", "Presets combine STT, translation, and vocabulary settings into reusable configurations.")}
             </p>
             <Button size="sm" onClick={openNewPreset}><Plus className="mr-1.5 h-4 w-4" /> {t("presets.newPreset", "New Preset")}</Button>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             {presets.map((p) => (
               <PresetCard
                 key={p.id} preset={p}
@@ -658,33 +658,41 @@ export function PresetsPage({
               />
             ))}
             {presets.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <SlidersHorizontal className="h-8 w-8 text-muted-foreground mb-3" />
-                <p className="font-medium">{t("presets.emptyPresets.title", "No presets yet")}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t("presets.emptyPresets.description", "Create your first preset to get started.")}</p>
-                <Button size="sm" className="mt-3" onClick={openNewPreset}><Plus className="mr-1.5 h-4 w-4" /> {t("presets.newPreset", "New Preset")}</Button>
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                <div className="rounded-2xl bg-muted/60 p-4 ring-1 ring-border">
+                  <SlidersHorizontal className="h-8 w-8 text-muted-foreground/70" />
+                </div>
+                <div>
+                  <p className="font-medium">{t("presets.emptyPresets.title", "No presets yet")}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("presets.emptyPresets.description", "Create your first preset to get started.")}</p>
+                </div>
+                <Button size="sm" className="mt-2" onClick={openNewPreset}><Plus className="mr-1.5 h-4 w-4" /> {t("presets.newPreset", "New Preset")}</Button>
               </div>
             )}
           </div>
         </TabsContent>
 
-        <TabsContent value="vocabularies" className="flex-1 mt-0 pt-4">
+        <TabsContent value="vocabularies" className="flex flex-col flex-1 mt-0 pt-4">
           <div className="flex items-center justify-between mb-4">
             <p className="text-sm text-muted-foreground">
               {t("presets.vocabDesc", "Define how specific terms should be translated for consistency across jobs.")}
             </p>
             <Button size="sm" onClick={openNewVocab}><Plus className="mr-1.5 h-4 w-4" /> {t("presets.newVocab", "New Vocabulary")}</Button>
           </div>
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-1 flex-col gap-2">
             {vocabularies.map((v) => (
               <VocabCard key={v.id} vocab={v} onEdit={() => openEditVocab(v)} onDelete={() => setDeleteTarget({ type: "vocab", id: v.id, name: v.name })} />
             ))}
             {vocabularies.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-12 text-center">
-                <BookOpen className="h-8 w-8 text-muted-foreground mb-3" />
-                <p className="font-medium">{t("presets.emptyVocab.title", "No vocabularies yet")}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t("presets.emptyVocab.description", "Create a vocabulary dictionary to ensure consistent translations.")}</p>
-                <Button size="sm" className="mt-3" onClick={openNewVocab}><Plus className="mr-1.5 h-4 w-4" /> {t("presets.newVocab", "New Vocabulary")}</Button>
+              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
+                <div className="rounded-2xl bg-muted/60 p-4 ring-1 ring-border">
+                  <BookOpen className="h-8 w-8 text-muted-foreground/70" />
+                </div>
+                <div>
+                  <p className="font-medium">{t("presets.emptyVocab.title", "No vocabularies yet")}</p>
+                  <p className="text-sm text-muted-foreground mt-1">{t("presets.emptyVocab.description", "Create a vocabulary dictionary to ensure consistent translations.")}</p>
+                </div>
+                <Button size="sm" className="mt-2" onClick={openNewVocab}><Plus className="mr-1.5 h-4 w-4" /> {t("presets.newVocab", "New Vocabulary")}</Button>
               </div>
             )}
           </div>

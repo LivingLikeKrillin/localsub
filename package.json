@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "sync-python": "node scripts/sync-python-resources.mjs",
+    "build": "npm run sync-python && tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
     "generate-icons": "node scripts/generate-icons.mjs"

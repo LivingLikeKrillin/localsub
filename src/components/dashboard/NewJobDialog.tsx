@@ -134,7 +134,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
               {t("dashboard.newJob.dropzone", "Drag and drop files here, or click to browse")}
             </p>
             <p className="text-xs text-muted-foreground/60">
-              MP4, MKV, AVI, MOV, MP3, WAV
+              {t("dashboard.newJob.supportedFormats")}
             </p>
           </div>
 
@@ -200,7 +200,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
               </RadioGroup>
               {linkedVocab && (
                 <p className="text-xs text-muted-foreground">
-                  Linked vocabulary: <span className="font-medium text-foreground">{linkedVocab.name}</span> ({linkedVocab.entries.length} entries)
+                  {t("dashboard.newJob.linkedVocab")} <span className="font-medium text-foreground">{linkedVocab.name}</span> ({t("presets.dialog.entriesCount", { count: linkedVocab.entries.length })})
                 </p>
               )}
             </div>

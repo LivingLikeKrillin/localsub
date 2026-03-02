@@ -60,7 +60,9 @@
       "preset": "프리셋",
       "noPresets": "사용 가능한 프리셋이 없습니다. 프리셋 페이지에서 만들어주세요.",
       "start": "작업 시작",
-      "startMultiple": "{{count}}개 작업 시작"
+      "startMultiple": "{{count}}개 작업 시작",
+      "supportedFormats": "MP4, MKV, AVI, MOV, MP3, WAV",
+      "linkedVocab": "연결된 용어사전:"
     }
   },
   "editor": {
@@ -180,6 +182,7 @@
     },
     "twoPass": "2-Pass",
     "customPrompt": "커스텀 지시사항",
+    "customPromptPlaceholder": "추가 번역 지시사항 입력...",
     "vocab": {
       "importCsv": "CSV 가져오기",
       "imported": "{{count}}건 가져옴",
@@ -207,6 +210,7 @@
       "target": "번역",
       "context": "문맥",
       "note": "메모",
+      "optional": "선택사항",
       "addEntry": "항목 추가",
       "cancel": "취소",
       "saveChanges": "변경 저장",

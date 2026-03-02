@@ -60,7 +60,9 @@
       "preset": "Preset",
       "noPresets": "No presets available. Create one in the Presets page.",
       "start": "Start job",
-      "startMultiple": "Start {{count}} jobs"
+      "startMultiple": "Start {{count}} jobs",
+      "supportedFormats": "MP4, MKV, AVI, MOV, MP3, WAV",
+      "linkedVocab": "Linked vocabulary:"
     }
   },
   "editor": {
@@ -180,6 +182,7 @@
     },
     "twoPass": "2-Pass",
     "customPrompt": "Custom Instructions",
+    "customPromptPlaceholder": "Optional extra translation instructions...",
     "vocab": {
       "importCsv": "Import CSV",
       "imported": "{{count}} entries imported",
@@ -207,6 +210,7 @@
       "target": "Target",
       "context": "Context",
       "note": "Note",
+      "optional": "Optional",
       "addEntry": "Add Entry",
       "cancel": "Cancel",
       "saveChanges": "Save Changes",

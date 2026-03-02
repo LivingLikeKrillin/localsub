@@ -403,7 +403,7 @@ function PresetDialog({
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
                 rows={2}
-                placeholder="Optional extra translation instructions..."
+                placeholder={t("presets.customPromptPlaceholder")}
                 className="resize-none"
               />
             </div>
@@ -550,16 +550,16 @@ function VocabDialog({
                     {entries.map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell className="p-1">
-                          <Input value={entry.source} onChange={(e) => updateEntry(entry.id, "source", e.target.value)} placeholder="Source" className="h-8 text-sm" />
+                          <Input value={entry.source} onChange={(e) => updateEntry(entry.id, "source", e.target.value)} placeholder={t("presets.dialog.source")} className="h-8 text-sm" />
                         </TableCell>
                         <TableCell className="p-1">
-                          <Input value={entry.target} onChange={(e) => updateEntry(entry.id, "target", e.target.value)} placeholder="Translation" className="h-8 text-sm" />
+                          <Input value={entry.target} onChange={(e) => updateEntry(entry.id, "target", e.target.value)} placeholder={t("presets.dialog.target")} className="h-8 text-sm" />
                         </TableCell>
                         <TableCell className="p-1">
-                          <Input value={entry.context ?? ""} onChange={(e) => updateEntry(entry.id, "context", e.target.value)} placeholder="Optional" className="h-8 text-sm" />
+                          <Input value={entry.context ?? ""} onChange={(e) => updateEntry(entry.id, "context", e.target.value)} placeholder={t("presets.dialog.optional")} className="h-8 text-sm" />
                         </TableCell>
                         <TableCell className="p-1">
-                          <Input value={entry.note ?? ""} onChange={(e) => updateEntry(entry.id, "note", e.target.value)} placeholder="Optional" className="h-8 text-sm" />
+                          <Input value={entry.note ?? ""} onChange={(e) => updateEntry(entry.id, "note", e.target.value)} placeholder={t("presets.dialog.optional")} className="h-8 text-sm" />
                         </TableCell>
                         <TableCell className="p-1">
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => removeEntry(entry.id)}>

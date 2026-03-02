@@ -34,7 +34,8 @@
     },
     "actions": {
       "remove": "Remove",
-      "retry": "Retry"
+      "retry": "Retry",
+      "openEditor": "Open in Editor"
     },
     "search": "Search files...",
     "sort": {
@@ -106,6 +107,15 @@
       "replaceAll": "Replace All",
       "caseSensitive": "Case Sensitive",
       "searchOriginal": "Search Original Text"
+    },
+    "vocab": {
+      "addToVocab": "Add to Vocabulary",
+      "source": "Source term",
+      "target": "Translation",
+      "selectVocab": "Vocabulary",
+      "noVocabs": "No vocabularies. Create one in Presets.",
+      "added": "Added to {{name}}",
+      "vocabMatch": "Vocabulary: {{source}} → {{target}}"
     }
   },
   "presets": {

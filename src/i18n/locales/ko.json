@@ -34,7 +34,8 @@
     },
     "actions": {
       "remove": "삭제",
-      "retry": "재시도"
+      "retry": "재시도",
+      "openEditor": "에디터 열기"
     },
     "search": "파일 검색...",
     "sort": {
@@ -106,6 +107,15 @@
       "replaceAll": "모두 바꾸기",
       "caseSensitive": "대소문자 구분",
       "searchOriginal": "원문 검색"
+    },
+    "vocab": {
+      "addToVocab": "용어사전에 추가",
+      "source": "원문 용어",
+      "target": "번역",
+      "selectVocab": "용어사전",
+      "noVocabs": "용어사전이 없습니다. 프리셋에서 만드세요.",
+      "added": "{{name}}에 추가됨",
+      "vocabMatch": "용어사전: {{source}} → {{target}}"
     }
   },
   "presets": {

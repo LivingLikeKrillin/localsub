@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { Clock, Type, ArrowRight, Scissors, Merge, Trash2 } from "lucide-react"
+import { Clock, Type, ArrowRight, Scissors, Merge, Trash2, BookPlus } from "lucide-react"
+import { toastSuccess } from "@/lib/toast"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -8,7 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import type { SubtitleLine } from "@/types"
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover"
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select"
+import type { SubtitleLine, Vocabulary } from "@/types"
 
 interface EditPanelProps {
   line: SubtitleLine | null
@@ -18,6 +21,8 @@ interface EditPanelProps {
   onDelete?: (id: string) => void
   canSplitLine: boolean
   canMergeLine: boolean
+  vocabularies?: Vocabulary[]
+  onUpdateVocabulary?: (v: Vocabulary) => Promise<Vocabulary[]>
 }
 
 function formatTimestamp(seconds: number): string {
@@ -78,8 +83,12 @@ function TimestampInput({
   )
 }
 
-export function EditPanel({ line, onUpdateLine, onSplit, onMergeWithNext, onDelete, canSplitLine, canMergeLine }: EditPanelProps) {
+export function EditPanel({ line, onUpdateLine, onSplit, onMergeWithNext, onDelete, canSplitLine, canMergeLine, vocabularies, onUpdateVocabulary }: EditPanelProps) {
   const { t } = useTranslation()
+  const [vocabOpen, setVocabOpen] = useState(false)
+  const [vocabSource, setVocabSource] = useState("")
+  const [vocabTarget, setVocabTarget] = useState("")
+  const [selectedVocabId, setSelectedVocabId] = useState("")
 
   if (!line) {
     return (
@@ -186,6 +195,97 @@ export function EditPanel({ line, onUpdateLine, onSplit, onMergeWithNext, onDele
           className="resize-none text-sm"
         />
       </div>
+
+      {/* Add to Vocabulary */}
+      {vocabularies && onUpdateVocabulary && (
+        <Popover open={vocabOpen} onOpenChange={(open) => {
+          setVocabOpen(open)
+          if (open) {
+            setVocabSource("")
+            setVocabTarget("")
+            setSelectedVocabId(vocabularies.length > 0 ? vocabularies[0].id : "")
+          }
+        }}>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm">
+              <BookPlus className="mr-1.5 h-3.5 w-3.5" />
+              {t("editor.vocab.addToVocab")}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80" align="start">
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-medium">{t("editor.vocab.addToVocab")}</p>
+              {vocabularies.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t("editor.vocab.noVocabs")}</p>
+              ) : (
+                <>
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs">{t("editor.vocab.source")}</Label>
+                    <Input
+                      value={vocabSource}
+                      onChange={(e) => setVocabSource(e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder={t("editor.vocab.source")}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs">{t("editor.vocab.target")}</Label>
+                    <Input
+                      value={vocabTarget}
+                      onChange={(e) => setVocabTarget(e.target.value)}
+                      className="h-8 text-sm"
+                      placeholder={t("editor.vocab.target")}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <Label className="text-xs">{t("editor.vocab.selectVocab")}</Label>
+                    <Select value={selectedVocabId} onValueChange={setSelectedVocabId}>
+                      <SelectTrigger className="h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vocabularies.map((v) => (
+                          <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <Button variant="ghost" size="sm" onClick={() => setVocabOpen(false)}>
+                      {t("shared.cancel")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      disabled={!vocabSource.trim() || !vocabTarget.trim() || !selectedVocabId}
+                      onClick={async () => {
+                        const vocab = vocabularies.find((v) => v.id === selectedVocabId)
+                        if (!vocab) return
+                        const updated: Vocabulary = {
+                          ...vocab,
+                          entries: [
+                            ...vocab.entries,
+                            { id: crypto.randomUUID(), source: vocabSource.trim(), target: vocabTarget.trim() },
+                          ],
+                          updated_at: new Date().toISOString(),
+                        }
+                        try {
+                          await onUpdateVocabulary(updated)
+                          toastSuccess(t("editor.vocab.added", { name: vocab.name }))
+                          setVocabOpen(false)
+                        } catch {
+                          // error toast handled by hook
+                        }
+                      }}
+                    >
+                      {t("editor.vocab.addToVocab")}
+                    </Button>
+                  </div>
+                </>
+              )}
+            </div>
+          </PopoverContent>
+        </Popover>
+      )}
 
       {/* Translated text */}
       <div className="flex flex-col gap-1.5">

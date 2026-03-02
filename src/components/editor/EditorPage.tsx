@@ -16,7 +16,7 @@ import { VideoPreview } from "./VideoPreview"
 import { loadJobSubtitles, saveJobSubtitles, exportSubtitles } from "@/lib/tauriApi"
 import { splitLine, mergeLines, reindex, getSplitTime, canSplit, canMerge } from "@/lib/subtitleOps"
 import { useHistory } from "@/hooks/useHistory"
-import type { SubtitleLine } from "@/types"
+import type { SubtitleLine, Vocabulary } from "@/types"
 
 export interface SearchMatch {
   lineId: string
@@ -30,9 +30,11 @@ interface EditorPageProps {
   filePath: string | null
   outputDir: string
   subtitleFormat: string
+  vocabularies?: Vocabulary[]
+  onUpdateVocabulary?: (v: Vocabulary) => Promise<Vocabulary[]>
 }
 
-export function EditorPage({ jobId, filePath, outputDir, subtitleFormat }: EditorPageProps) {
+export function EditorPage({ jobId, filePath, outputDir, subtitleFormat, vocabularies, onUpdateVocabulary }: EditorPageProps) {
   const { t } = useTranslation()
   const { present: lines, push: pushLines, undo, redo, reset: resetLines, canUndo, canRedo } = useHistory<SubtitleLine[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -726,6 +728,7 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat }: Edito
               onDelete={handleDeleteLine}
               highlightMatches={findOpen ? searchMatches : undefined}
               currentMatchIndex={findOpen ? matchIndex : undefined}
+              vocabularies={vocabularies}
             />
           </ResizablePanel>
           <ResizableHandle />
@@ -738,6 +741,8 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat }: Edito
               onDelete={handleDeleteLine}
               canSplitLine={canSplitLine}
               canMergeLine={canMergeLine}
+              vocabularies={vocabularies}
+              onUpdateVocabulary={onUpdateVocabulary}
             />
           </ResizablePanel>
         </ResizablePanelGroup>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Plus, Trash2, FileVideo, Clock, Filter, MoreHorizontal, RotateCcw, Search, ArrowUpDown } from "lucide-react"
+import { Plus, Trash2, FileVideo, Clock, Filter, MoreHorizontal, RotateCcw, Search, ArrowUpDown, PenLine } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toastInfo, toastError } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
@@ -287,6 +287,17 @@ export function DashboardPage({
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {job.status === "completed" && onOpenEditor && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); onOpenEditor(job.id, job.file_path) }}
+                            >
+                              <PenLine className="mr-2 h-3.5 w-3.5" />
+                              {t("dashboard.actions.openEditor")}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
                         {job.status === "failed" && onRetryJob && (
                           <>
                             <DropdownMenuItem

@@ -271,6 +271,8 @@ function App() {
                 filePath={editorFilePath}
                 outputDir={config.output_dir}
                 subtitleFormat={config.subtitle_format}
+                vocabularies={vocabulariesHook.vocabularies}
+                onUpdateVocabulary={vocabulariesHook.update}
               />
             )}
 

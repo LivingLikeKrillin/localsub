@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react"
+import { useRef, useEffect, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 import { Scissors, Merge, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
@@ -11,7 +11,7 @@ import {
   ContextMenuShortcut,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu"
-import type { SubtitleLine } from "@/types"
+import type { SubtitleLine, Vocabulary } from "@/types"
 import type { SearchMatch } from "./EditorPage"
 
 interface SubtitleListProps {
@@ -24,6 +24,7 @@ interface SubtitleListProps {
   onDelete?: (id: string) => void
   highlightMatches?: SearchMatch[]
   currentMatchIndex?: number
+  vocabularies?: Vocabulary[]
 }
 
 function formatTimestamp(seconds: number): string {
@@ -72,6 +73,58 @@ function HighlightedText({
   return <>{parts}</>
 }
 
+interface VocabTerm {
+  source: string
+  target: string
+}
+
+function VocabHighlightedText({
+  text,
+  vocabTerms,
+  vocabRegex,
+}: {
+  text: string
+  vocabTerms: VocabTerm[]
+  vocabRegex: RegExp | null
+}) {
+  if (!vocabRegex || vocabTerms.length === 0) return <>{text}</>
+
+  const parts: React.ReactNode[] = []
+  let lastIndex = 0
+  let match: RegExpExecArray | null
+
+  // Reset regex state
+  vocabRegex.lastIndex = 0
+  while ((match = vocabRegex.exec(text)) !== null) {
+    const matchedText = match[0]
+    const idx = match.index
+
+    if (idx > lastIndex) {
+      parts.push(text.slice(lastIndex, idx))
+    }
+
+    // Find matching vocab term (case-insensitive)
+    const term = vocabTerms.find((t) => t.source.toLowerCase() === matchedText.toLowerCase())
+
+    parts.push(
+      <span
+        key={idx}
+        className="underline decoration-dotted decoration-primary/60 underline-offset-2 cursor-help"
+        title={term ? `→ ${term.target}` : undefined}
+      >
+        {text.slice(idx, idx + matchedText.length)}
+      </span>,
+    )
+    lastIndex = idx + matchedText.length
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex))
+  }
+
+  return <>{parts}</>
+}
+
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   translated: "default",
   untranslated: "outline",
@@ -79,9 +132,28 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   editing: "secondary",
 }
 
-export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit, onMergeWithNext, onDelete, highlightMatches, currentMatchIndex }: SubtitleListProps) {
+export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit, onMergeWithNext, onDelete, highlightMatches, currentMatchIndex, vocabularies }: SubtitleListProps) {
   const { t } = useTranslation()
   const selectedRef = useRef<HTMLDivElement>(null)
+
+  // Pre-compile vocab terms and regex for highlighting
+  const { vocabTerms, vocabRegex } = useMemo(() => {
+    if (!vocabularies || vocabularies.length === 0) return { vocabTerms: [], vocabRegex: null }
+    const terms: VocabTerm[] = []
+    for (const vocab of vocabularies) {
+      for (const entry of vocab.entries) {
+        if (entry.source.trim()) {
+          terms.push({ source: entry.source, target: entry.target })
+        }
+      }
+    }
+    if (terms.length === 0) return { vocabTerms: terms, vocabRegex: null }
+    // Sort by length descending so longer terms match first
+    terms.sort((a, b) => b.source.length - a.source.length)
+    const escaped = terms.map((t) => t.source.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi")
+    return { vocabTerms: terms, vocabRegex: regex }
+  }, [vocabularies])
 
   // Auto-scroll to selected
   useEffect(() => {
@@ -145,7 +217,11 @@ export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit
                           currentMatchIndex={currentMatchIndex ?? -1}
                         />
                       ) : (
-                        line.original_text
+                        <VocabHighlightedText
+                          text={line.original_text}
+                          vocabTerms={vocabTerms}
+                          vocabRegex={vocabRegex}
+                        />
                       )}
                     </p>
                     {line.translated_text && (

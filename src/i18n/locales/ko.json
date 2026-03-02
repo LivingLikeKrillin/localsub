@@ -462,9 +462,9 @@
       }
     },
     "models": {
-      "title": "설치된 모델",
+      "title": "모델",
       "description": "음성 인식 및 번역을 위한 AI 모델을 관리합니다.",
-      "empty": "설치된 모델이 없습니다.",
+      "empty": "모델 카탈로그 로딩 중...",
       "whisperSection": "음성 인식 (Whisper)",
       "llmSection": "번역 (LLM)",
       "active": "활성",
@@ -473,7 +473,13 @@
       "confirmDelete": "모델 삭제",
       "confirmDeleteMsg": "이 모델을 삭제하시겠습니까? 나중에 다시 다운로드할 수 있습니다.",
       "download": "다운로드",
+      "install": "설치",
       "size": "크기",
+      "noGpu": "GPU 미감지 — 모델은 CPU에서 실행됩니다",
+      "recommended": "추천",
+      "cpuOnly": "CPU 전용",
+      "tooLarge": "VRAM 부족",
+      "notInstalled": "미설치",
       "status": {
         "downloading": "다운로드 중",
         "verifying": "검증 중",

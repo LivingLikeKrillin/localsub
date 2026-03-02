@@ -462,9 +462,9 @@
       }
     },
     "models": {
-      "title": "Installed Models",
+      "title": "Models",
       "description": "Manage AI models for speech recognition and translation.",
-      "empty": "No models installed.",
+      "empty": "Loading model catalog...",
       "whisperSection": "Speech Recognition (Whisper)",
       "llmSection": "Translation (LLM)",
       "active": "Active",
@@ -473,7 +473,13 @@
       "confirmDelete": "Delete Model",
       "confirmDeleteMsg": "Are you sure you want to delete this model? You can re-download it later.",
       "download": "Download",
+      "install": "Install",
       "size": "Size",
+      "noGpu": "No GPU detected — models will run on CPU",
+      "recommended": "Recommended",
+      "cpuOnly": "CPU Only",
+      "tooLarge": "Insufficient VRAM",
+      "notInstalled": "Not Installed",
       "status": {
         "downloading": "Downloading",
         "verifying": "Verifying",

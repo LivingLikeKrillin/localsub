@@ -82,6 +82,13 @@ function App() {
     }
   }, [screen, hardware, detectHw]);
 
+  // Lazy-load model catalog when entering settings
+  useEffect(() => {
+    if (activePage === "settings" && !models.catalog) {
+      models.loadCatalog();
+    }
+  }, [activePage, models.catalog, models.loadCatalog]);
+
   // Load persisted jobs when entering main screen
   const [jobsLoaded, setJobsLoaded] = useState(false);
   useEffect(() => {
@@ -284,6 +291,8 @@ function App() {
               <SettingsPage
                 config={config}
                 manifest={models.manifest}
+                catalog={models.catalog}
+                hardware={hardware}
                 onUpdateConfig={(patch) => updateConfig(patch)}
                 onDeleteModel={models.deleteModel}
                 onDownloadModel={models.startDownload}

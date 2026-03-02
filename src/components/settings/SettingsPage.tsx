@@ -27,7 +27,7 @@ import { ModelsSection } from "./ModelsSection"
 import { PerformanceSection } from "./PerformanceSection"
 import { SystemSection } from "./SystemSection"
 import { AboutSection } from "./AboutSection"
-import type { AppConfig, PartialConfig, ModelManifestEntry, SettingsTab } from "@/types"
+import type { AppConfig, PartialConfig, ModelManifestEntry, ModelCatalog, HardwareInfo, SettingsTab } from "@/types"
 
 const TABS: { value: SettingsTab; icon: typeof Settings2; labelKey: string }[] = [
   { value: "general", icon: Settings2, labelKey: "settings.tabs.general" },
@@ -41,6 +41,8 @@ const TABS: { value: SettingsTab; icon: typeof Settings2; labelKey: string }[] =
 interface SettingsPageProps {
   config: AppConfig
   manifest: ModelManifestEntry[]
+  catalog: ModelCatalog | null
+  hardware: HardwareInfo | null
   onUpdateConfig: (partial: PartialConfig) => void
   onDeleteModel: (id: string) => void
   onDownloadModel: (id: string) => void
@@ -49,6 +51,8 @@ interface SettingsPageProps {
 export function SettingsPage({
   config,
   manifest,
+  catalog,
+  hardware,
   onUpdateConfig,
   onDeleteModel,
   onDownloadModel,
@@ -138,6 +142,9 @@ export function SettingsPage({
           {activeTab === "models" && (
             <ModelsSection
               manifest={manifest}
+              catalog={catalog}
+              hardware={hardware}
+              profile={config.profile}
               activeWhisperModel={config.active_whisper_model}
               activeLlmModel={config.active_llm_model}
               onUpdate={onUpdateConfig}

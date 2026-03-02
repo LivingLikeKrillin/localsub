@@ -155,6 +155,13 @@
       "honorific": "존댓말"
     },
     "default": "기본",
+    "quality": {
+      "fast": "빠름",
+      "balanced": "균형",
+      "best": "최고"
+    },
+    "twoPass": "2-Pass",
+    "customPrompt": "커스텀 지시사항",
     "vocab": {
       "importCsv": "CSV 가져오기",
       "imported": "{{count}}건 가져옴",
@@ -469,7 +476,20 @@
         "natural": "자연스러운",
         "casual": "구어체",
         "formal": "격식체"
-      }
+      },
+      "quality": {
+        "title": "번역 품질",
+        "fast": "빠름",
+        "fastDesc": "최소 샘플링으로 빠른 번역. 초안 작업에 적합.",
+        "balanced": "균형",
+        "balancedDesc": "적절한 속도와 좋은 품질. 대부분의 용도에 추천.",
+        "best": "최고",
+        "bestDesc": "최고 품질. 기본적으로 2-pass 교정 활성화."
+      },
+      "customPrompt": "커스텀 지시사항",
+      "customPromptPlaceholder": "추가 번역 지시사항 입력 (예: '반말로 번역' 또는 '영어 기술 용어 유지')...",
+      "twoPass": "2-Pass 교정",
+      "twoPassDesc": "2차 패스로 번역을 교정합니다. 느리지만 더 일관된 결과."
     },
     "models": {
       "title": "모델",
@@ -490,6 +510,8 @@
       "cpuOnly": "CPU 전용",
       "tooLarge": "VRAM 부족",
       "notInstalled": "미설치",
+      "categoryGeneral": "범용",
+      "categoryInstruct": "인스트럭트",
       "status": {
         "downloading": "다운로드 중",
         "verifying": "검증 중",

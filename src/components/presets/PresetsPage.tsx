@@ -37,6 +37,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -142,6 +143,12 @@ function PresetCard({
           {t(`presets.lang.${preset.target_lang}`, preset.target_lang)}
         </span>
         <span>Style: <span className="text-foreground font-medium">{t(`presets.style.${preset.translation_style}`, preset.translation_style)}</span></span>
+        {preset.translation_quality && (
+          <span>Quality: <span className="text-foreground font-medium">{t(`presets.quality.${preset.translation_quality}`, preset.translation_quality)}</span></span>
+        )}
+        {preset.two_pass_translation && (
+          <Badge variant="outline" className="text-[10px]">{t("presets.twoPass")}</Badge>
+        )}
         {vocabName && (
           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5">
             <BookOpen className="h-3 w-3 text-primary" />
@@ -239,6 +246,9 @@ function PresetDialog({
   const [translationStyle, setTranslationStyle] = useState(initial?.translation_style ?? "formal")
   const [llmModel, setLlmModel] = useState(initial?.llm_model ?? "qwen3-7b")
   const [vocabularyId, setVocabularyId] = useState(initial?.vocabulary_id ?? "none")
+  const [translationQuality, setTranslationQuality] = useState(initial?.translation_quality ?? "balanced")
+  const [customPrompt, setCustomPrompt] = useState(initial?.custom_translation_prompt ?? "")
+  const [twoPass, setTwoPass] = useState(initial?.two_pass_translation ?? false)
 
   function handleSave() {
     if (!name.trim()) return
@@ -252,6 +262,9 @@ function PresetDialog({
       translation_style: translationStyle,
       llm_model: llmModel,
       vocabulary_id: vocabularyId === "none" ? null : vocabularyId,
+      translation_quality: translationQuality,
+      custom_translation_prompt: customPrompt || undefined,
+      two_pass_translation: twoPass,
     })
     onOpenChange(false)
   }
@@ -360,6 +373,39 @@ function PresetDialog({
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>{t("presets.quality.fast", "Translation Quality")}</Label>
+              <div className="flex gap-2">
+                {(["fast", "balanced", "best"] as const).map((tier) => (
+                  <Button
+                    key={tier}
+                    variant={translationQuality === tier ? "default" : "outline"}
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => setTranslationQuality(tier)}
+                  >
+                    {t(`presets.quality.${tier}`, tier)}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <Label>{t("presets.twoPass", "2-Pass Refinement")}</Label>
+              <Switch checked={twoPass} onCheckedChange={setTwoPass} />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>{t("presets.customPrompt", "Custom Instructions")}</Label>
+              <Textarea
+                value={customPrompt}
+                onChange={(e) => setCustomPrompt(e.target.value)}
+                rows={2}
+                placeholder="Optional extra translation instructions..."
+                className="resize-none"
+              />
             </div>
           </div>
         </ScrollArea>

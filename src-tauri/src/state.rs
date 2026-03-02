@@ -111,6 +111,12 @@ pub struct AppConfig {
     pub gpu_acceleration: Option<bool>,
     #[serde(default)]
     pub max_memory_mb: Option<u32>,
+    #[serde(default)]
+    pub translation_quality: Option<String>,
+    #[serde(default)]
+    pub custom_translation_prompt: Option<String>,
+    #[serde(default)]
+    pub two_pass_translation: Option<bool>,
 }
 
 impl Default for AppConfig {
@@ -137,6 +143,9 @@ impl Default for AppConfig {
             max_concurrent_jobs: None,
             gpu_acceleration: None,
             max_memory_mb: None,
+            translation_quality: None,
+            custom_translation_prompt: None,
+            two_pass_translation: None,
         }
     }
 }
@@ -170,6 +179,9 @@ pub struct PartialConfig {
     pub max_concurrent_jobs: Option<Option<u32>>,
     pub gpu_acceleration: Option<Option<bool>>,
     pub max_memory_mb: Option<Option<u32>>,
+    pub translation_quality: Option<Option<String>>,
+    pub custom_translation_prompt: Option<Option<String>>,
+    pub two_pass_translation: Option<Option<bool>>,
 }
 
 // ── Glossary types ──
@@ -182,14 +194,14 @@ pub struct GlossaryEntry {
 
 // ── Model Catalog types (parsed from model_catalog.json) ──
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelCatalog {
     pub version: u32,
     pub whisper_models: Vec<WhisperCatalogEntry>,
     pub llm_models: Vec<LlmCatalogEntry>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WhisperCatalogEntry {
     pub id: String,
     pub name: String,
@@ -200,7 +212,7 @@ pub struct WhisperCatalogEntry {
     pub profiles: Vec<Profile>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LlmCatalogEntry {
     pub id: String,
     pub name: String,
@@ -211,6 +223,8 @@ pub struct LlmCatalogEntry {
     pub quant: String,
     pub profiles: Vec<Profile>,
     pub n_gpu_layers_default: i32,
+    #[serde(default)]
+    pub model_category: Option<String>,
 }
 
 // ── Runtime types ──
@@ -291,6 +305,12 @@ pub struct Preset {
     pub vocabulary_id: Option<String>,
     #[serde(default)]
     pub is_default: Option<bool>,
+    #[serde(default)]
+    pub translation_quality: Option<String>,
+    #[serde(default)]
+    pub custom_translation_prompt: Option<String>,
+    #[serde(default)]
+    pub two_pass_translation: Option<bool>,
     pub created_at: String,
     pub updated_at: String,
 }

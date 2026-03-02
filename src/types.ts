@@ -85,6 +85,9 @@ export interface AppConfig {
   max_concurrent_jobs: number | null;
   gpu_acceleration: boolean | null;
   max_memory_mb: number | null;
+  translation_quality: string | null;
+  custom_translation_prompt: string | null;
+  two_pass_translation: boolean | null;
 }
 
 export interface PartialConfig {
@@ -107,6 +110,9 @@ export interface PartialConfig {
   max_concurrent_jobs?: number | null;
   gpu_acceleration?: boolean | null;
   max_memory_mb?: number | null;
+  translation_quality?: string | null;
+  custom_translation_prompt?: string | null;
+  two_pass_translation?: boolean | null;
 }
 
 // ── Glossary types ──
@@ -138,6 +144,7 @@ export interface LlmModelEntry {
   quant: string;
   profiles: Profile[];
   n_gpu_layers_default: number;
+  model_category?: string;
 }
 
 export interface ModelCatalog {
@@ -184,6 +191,9 @@ export interface Preset {
   llm_model: string;
   vocabulary_id: string | null;
   is_default?: boolean;
+  translation_quality?: string;
+  custom_translation_prompt?: string;
+  two_pass_translation?: boolean;
   created_at: string;
   updated_at: string;
 }

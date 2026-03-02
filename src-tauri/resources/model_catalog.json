@@ -57,7 +57,8 @@
       "sha256": "placeholder",
       "quant": "Q4_K_M",
       "profiles": ["lite"],
-      "n_gpu_layers_default": 0
+      "n_gpu_layers_default": 0,
+      "model_category": "general"
     },
     {
       "id": "qwen3-8b-q5km",
@@ -68,7 +69,8 @@
       "sha256": "placeholder",
       "quant": "Q5_K_M",
       "profiles": ["balanced"],
-      "n_gpu_layers_default": 28
+      "n_gpu_layers_default": 28,
+      "model_category": "general"
     },
     {
       "id": "qwen3-14b-q8",
@@ -79,7 +81,20 @@
       "sha256": "placeholder",
       "quant": "Q8_0",
       "profiles": ["power"],
-      "n_gpu_layers_default": -1
+      "n_gpu_layers_default": -1,
+      "model_category": "general"
+    },
+    {
+      "id": "qwen25-7b-instruct-q5km",
+      "name": "Qwen2.5-7B Instruct Q5_K_M",
+      "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",
+      "filename": "qwen2.5-7b-instruct-q5_k_m.gguf",
+      "size_bytes": 5900000000,
+      "sha256": "placeholder",
+      "quant": "Q5_K_M",
+      "profiles": ["balanced"],
+      "n_gpu_layers_default": 28,
+      "model_category": "instruct"
     }
   ]
 }

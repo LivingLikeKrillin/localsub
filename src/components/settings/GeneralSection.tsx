@@ -10,7 +10,9 @@ import {
 } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
+import { Switch } from "@/components/ui/switch"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import type { AppConfig, PartialConfig, ExternalApiConfig } from "@/types"
 
@@ -45,6 +47,12 @@ const STYLE_PRESETS = [
   { value: "natural", labelKey: "settings.translation.style.natural" as const },
   { value: "casual", labelKey: "settings.translation.style.casual" as const },
   { value: "formal", labelKey: "settings.translation.style.formal" as const },
+]
+
+const QUALITY_TIERS = [
+  { value: "fast", labelKey: "settings.translation.quality.fast" as const, descKey: "settings.translation.quality.fastDesc" as const },
+  { value: "balanced", labelKey: "settings.translation.quality.balanced" as const, descKey: "settings.translation.quality.balancedDesc" as const },
+  { value: "best", labelKey: "settings.translation.quality.best" as const, descKey: "settings.translation.quality.bestDesc" as const },
 ]
 
 export function GeneralSection({ config, onUpdate }: GeneralSectionProps) {
@@ -148,6 +156,56 @@ export function GeneralSection({ config, onUpdate }: GeneralSectionProps) {
             max={10}
             step={1}
             className="w-full"
+          />
+        </div>
+      )}
+
+      {/* Translation Quality — only for local mode */}
+      {config.translation_mode === "local" && (
+        <div className="flex flex-col gap-2">
+          <Label>{t("settings.translation.quality.title")}</Label>
+          <div className="flex gap-2">
+            {QUALITY_TIERS.map((tier) => (
+              <Button
+                key={tier.value}
+                variant={(config.translation_quality ?? "balanced") === tier.value ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+                onClick={() => onUpdate({ translation_quality: tier.value })}
+              >
+                {t(tier.labelKey)}
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {t(QUALITY_TIERS.find((tier) => tier.value === (config.translation_quality ?? "balanced"))?.descKey ?? "settings.translation.quality.balancedDesc")}
+          </p>
+        </div>
+      )}
+
+      {/* 2-Pass Refinement — only for local mode */}
+      {config.translation_mode === "local" && (
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex flex-col gap-0.5">
+            <Label>{t("settings.translation.twoPass")}</Label>
+            <p className="text-xs text-muted-foreground">{t("settings.translation.twoPassDesc")}</p>
+          </div>
+          <Switch
+            checked={config.two_pass_translation ?? (config.translation_quality ?? "balanced") === "best"}
+            onCheckedChange={(v) => onUpdate({ two_pass_translation: v })}
+          />
+        </div>
+      )}
+
+      {/* Custom Translation Prompt — only for local mode */}
+      {config.translation_mode === "local" && (
+        <div className="flex flex-col gap-2">
+          <Label>{t("settings.translation.customPrompt")}</Label>
+          <Textarea
+            value={config.custom_translation_prompt ?? ""}
+            onChange={(e) => onUpdate({ custom_translation_prompt: e.target.value || null })}
+            placeholder={t("settings.translation.customPromptPlaceholder")}
+            className="min-h-[80px] resize-none"
           />
         </div>
       )}

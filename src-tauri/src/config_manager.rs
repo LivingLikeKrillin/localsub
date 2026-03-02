@@ -93,6 +93,15 @@ pub fn update_config(partial: PartialConfig, current: &mut AppConfig) -> Result<
     if let Some(v) = partial.max_memory_mb {
         current.max_memory_mb = v;
     }
+    if let Some(v) = partial.translation_quality {
+        current.translation_quality = v;
+    }
+    if let Some(v) = partial.custom_translation_prompt {
+        current.custom_translation_prompt = v;
+    }
+    if let Some(v) = partial.two_pass_translation {
+        current.two_pass_translation = v;
+    }
 
     save_config(current)
 }

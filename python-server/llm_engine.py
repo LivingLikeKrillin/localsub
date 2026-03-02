@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import uuid
 from enum import Enum
 from pathlib import Path
@@ -95,6 +96,50 @@ def is_model_loaded() -> bool:
     return _model is not None
 
 
+# ── Output postprocessing ──────────────────────────────────────────
+
+def _postprocess(raw: str) -> str:
+    """Clean LLM output: strip prefixes, quotes, backticks, think blocks."""
+    text = raw.strip()
+
+    # Strip <think>...</think> blocks (Qwen3 thinking mode leakage)
+    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
+    # Strip common prefixes
+    for prefix in [
+        "Translation:", "translation:", "번역:", "Answer:", "answer:",
+        "Output:", "output:", "Translated:", "translated:",
+    ]:
+        if text.startswith(prefix):
+            text = text[len(prefix):].strip()
+
+    # Strip wrapping quotes (double or single)
+    if len(text) >= 2:
+        if (text[0] == '"' and text[-1] == '"') or (text[0] == "'" and text[-1] == "'"):
+            text = text[1:-1].strip()
+
+    # Strip wrapping backticks
+    if len(text) >= 2 and text[0] == '`' and text[-1] == '`':
+        text = text[1:-1].strip()
+
+    # Strip triple backtick blocks
+    if text.startswith("```") and text.endswith("```"):
+        text = text[3:-3].strip()
+
+    return text
+
+
+# ── Quality tier sampling parameters ───────────────────────────────
+
+QUALITY_SAMPLING: dict[str, dict[str, float]] = {
+    "fast": {"temperature": 0.1, "top_p": 0.8, "repeat_penalty": 1.0},
+    "balanced": {"temperature": 0.3, "top_p": 0.9, "repeat_penalty": 1.1},
+    "best": {"temperature": 0.3, "top_p": 0.95, "repeat_penalty": 1.15},
+}
+
+BATCH_SIZE = 4
+
+
 # ── Job management ─────────────────────────────────────────────────
 
 class TranslateJobState(str, Enum):
@@ -117,6 +162,10 @@ def create_translate_job(
     glossary: list[dict[str, str]] | None = None,
     model_id: str | None = None,
     n_gpu_layers: int | None = None,
+    translation_quality: str = "balanced",
+    custom_prompt: str | None = None,
+    two_pass: bool = False,
+    model_category: str = "general",
 ) -> str:
     job_id = str(uuid.uuid4())
     _translate_jobs[job_id] = {
@@ -129,6 +178,10 @@ def create_translate_job(
         "glossary": glossary or [],
         "model_id": model_id,
         "n_gpu_layers": n_gpu_layers,
+        "translation_quality": translation_quality,
+        "custom_prompt": custom_prompt,
+        "two_pass": two_pass,
+        "model_category": model_category,
         "state": TranslateJobState.QUEUED,
         "cancel_flag": False,
     }
@@ -239,64 +292,211 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     context_window = job["context_window"]
     style_preset = job["style_preset"]
     glossary = job["glossary"]
+    quality = job.get("translation_quality", "balanced")
+    custom_prompt = job.get("custom_prompt")
+    two_pass = job.get("two_pass", False)
+    model_category = job.get("model_category", "general")
     total = len(segments)
     all_results: list[dict[str, Any]] = []
+    completed_translations: dict[int, str] = {}
+    sampling = QUALITY_SAMPLING.get(quality, QUALITY_SAMPLING["balanced"])
+
+    # Progress scaling for 2-pass
+    pass1_weight = 0.7 if two_pass else 1.0
 
     try:
         loop = asyncio.get_running_loop()
 
-        for i in range(total):
+        # ── Pass 1: Batch translation ──────────────────────────
+        i = 0
+        while i < total:
             if job["cancel_flag"]:
                 job["state"] = TranslateJobState.CANCELED
                 yield {"type": "cancelled", "job_id": job_id}
                 return
 
-            messages = prompt_builder.build_messages(
-                segments, i,
-                source_lang=source_lang,
-                target_lang=target_lang,
-                context_window=context_window,
-                style_preset=style_preset,
-                glossary=glossary,
-            )
+            # Determine batch
+            remaining = total - i
+            batch_size = min(BATCH_SIZE, remaining)
+            batch_indices = list(range(i, i + batch_size))
 
-            # Run LLM inference in executor (blocking call)
-            def _infer(msgs=messages):
-                return _model.create_chat_completion(
-                    messages=msgs,
-                    max_tokens=512,
+            if batch_size == 1:
+                # Single segment — use standard prompt
+                messages = prompt_builder.build_messages(
+                    segments, i,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                    context_window=context_window,
+                    style_preset=style_preset,
+                    glossary=glossary,
+                    translations=completed_translations,
+                    custom_prompt=custom_prompt,
+                    model_category=model_category,
                 )
 
-            response = await loop.run_in_executor(None, _infer)
+                def _infer_single(msgs=messages, samp=sampling):
+                    return _model.create_chat_completion(
+                        messages=msgs,
+                        max_tokens=512,
+                        temperature=samp["temperature"],
+                        top_p=samp["top_p"],
+                        repeat_penalty=samp["repeat_penalty"],
+                    )
 
-            translated = ""
-            if response and "choices" in response and len(response["choices"]) > 0:
-                content = response["choices"][0].get("message", {}).get("content") or ""
-                translated = content.strip()
+                response = await loop.run_in_executor(None, _infer_single)
+                translated = ""
+                if response and "choices" in response and len(response["choices"]) > 0:
+                    content = response["choices"][0].get("message", {}).get("content") or ""
+                    translated = _postprocess(content)
 
-            original = segments[i].get("text", "")
-            result_entry = {
-                "index": i,
-                "original": original,
-                "translated": translated,
-            }
-            all_results.append(result_entry)
+                completed_translations[i] = translated
+                result_entry = {
+                    "index": i,
+                    "original": segments[i].get("text", ""),
+                    "translated": translated,
+                }
+                all_results.append(result_entry)
 
-            yield {
-                "type": "translate_segment",
-                "job_id": job_id,
-                **result_entry,
-            }
+                yield {
+                    "type": "translate_segment",
+                    "job_id": job_id,
+                    **result_entry,
+                }
 
-            progress = min(int(((i + 1) / total) * 100), 99)
+                progress = min(int(((i + 1) / total) * pass1_weight * 100), 99)
+                yield {
+                    "type": "translate_progress",
+                    "job_id": job_id,
+                    "progress": progress,
+                    "message": f"Translating... ({i + 1}/{total} segments)",
+                }
+                i += 1
+            else:
+                # Batch translation
+                messages = prompt_builder.build_batch_messages(
+                    segments, batch_indices,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                    context_window=context_window,
+                    style_preset=style_preset,
+                    glossary=glossary,
+                    translations=completed_translations,
+                    custom_prompt=custom_prompt,
+                    model_category=model_category,
+                )
+
+                def _infer_batch(msgs=messages, samp=sampling, bs=batch_size):
+                    return _model.create_chat_completion(
+                        messages=msgs,
+                        max_tokens=512 * bs,
+                        temperature=samp["temperature"],
+                        top_p=samp["top_p"],
+                        repeat_penalty=samp["repeat_penalty"],
+                    )
+
+                response = await loop.run_in_executor(None, _infer_batch)
+                raw_output = ""
+                if response and "choices" in response and len(response["choices"]) > 0:
+                    raw_output = response["choices"][0].get("message", {}).get("content") or ""
+                    # Strip think blocks before parsing
+                    raw_output = re.sub(r"<think>.*?</think>", "", raw_output, flags=re.DOTALL).strip()
+
+                batch_translations = prompt_builder.parse_batch_output(raw_output, batch_size)
+
+                for batch_num, idx in enumerate(batch_indices):
+                    translated = _postprocess(batch_translations[batch_num])
+                    completed_translations[idx] = translated
+                    result_entry = {
+                        "index": idx,
+                        "original": segments[idx].get("text", ""),
+                        "translated": translated,
+                    }
+                    all_results.append(result_entry)
+
+                    yield {
+                        "type": "translate_segment",
+                        "job_id": job_id,
+                        **result_entry,
+                    }
+
+                progress = min(int(((i + batch_size) / total) * pass1_weight * 100), 99)
+                yield {
+                    "type": "translate_progress",
+                    "job_id": job_id,
+                    "progress": progress,
+                    "message": f"Translating... ({min(i + batch_size, total)}/{total} segments)",
+                }
+                i += batch_size
+
+            await asyncio.sleep(0)  # yield control
+
+        # ── Pass 2: Refinement (optional) ──────────────────────
+        if two_pass and not job["cancel_flag"]:
             yield {
                 "type": "translate_progress",
                 "job_id": job_id,
-                "progress": progress,
-                "message": f"Translating... ({i + 1}/{total} segments)",
+                "progress": 70,
+                "message": "Refining translations (pass 2)...",
             }
 
-            await asyncio.sleep(0)  # yield control
+            for idx in range(total):
+                if job["cancel_flag"]:
+                    job["state"] = TranslateJobState.CANCELED
+                    yield {"type": "cancelled", "job_id": job_id}
+                    return
+
+                draft = completed_translations.get(idx, "")
+                messages = prompt_builder.build_refine_messages(
+                    segments, idx, draft,
+                    source_lang=source_lang,
+                    target_lang=target_lang,
+                    translations=completed_translations,
+                    context_window=context_window,
+                    glossary=glossary,
+                    custom_prompt=custom_prompt,
+                    model_category=model_category,
+                )
+
+                def _infer_refine(msgs=messages, samp=sampling):
+                    return _model.create_chat_completion(
+                        messages=msgs,
+                        max_tokens=512,
+                        temperature=samp["temperature"],
+                        top_p=samp["top_p"],
+                        repeat_penalty=samp["repeat_penalty"],
+                    )
+
+                response = await loop.run_in_executor(None, _infer_refine)
+                refined = ""
+                if response and "choices" in response and len(response["choices"]) > 0:
+                    content = response["choices"][0].get("message", {}).get("content") or ""
+                    refined = _postprocess(content)
+
+                if refined:
+                    completed_translations[idx] = refined
+                    # Update the result entry
+                    for entry in all_results:
+                        if entry["index"] == idx:
+                            entry["translated"] = refined
+                            break
+
+                    yield {
+                        "type": "translate_segment",
+                        "job_id": job_id,
+                        "index": idx,
+                        "original": segments[idx].get("text", ""),
+                        "translated": refined,
+                    }
+
+                progress = 70 + min(int(((idx + 1) / total) * 30), 29)
+                yield {
+                    "type": "translate_progress",
+                    "job_id": job_id,
+                    "progress": progress,
+                    "message": f"Refining... ({idx + 1}/{total} segments)",
+                }
+
+                await asyncio.sleep(0)
 
         # Done
         job["state"] = TranslateJobState.DONE

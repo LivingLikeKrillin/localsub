@@ -155,6 +155,13 @@
       "honorific": "Honorific"
     },
     "default": "Default",
+    "quality": {
+      "fast": "Fast",
+      "balanced": "Balanced",
+      "best": "Best"
+    },
+    "twoPass": "2-Pass",
+    "customPrompt": "Custom Instructions",
     "vocab": {
       "importCsv": "Import CSV",
       "imported": "{{count}} entries imported",
@@ -469,7 +476,20 @@
         "natural": "Natural",
         "casual": "Casual",
         "formal": "Formal"
-      }
+      },
+      "quality": {
+        "title": "Translation Quality",
+        "fast": "Fast",
+        "fastDesc": "Quick translations with minimal sampling. Best for drafts.",
+        "balanced": "Balanced",
+        "balancedDesc": "Good quality with moderate speed. Recommended for most use.",
+        "best": "Best",
+        "bestDesc": "Highest quality. Enables 2-pass refinement by default."
+      },
+      "customPrompt": "Custom Instructions",
+      "customPromptPlaceholder": "Add extra translation instructions (e.g. 'Use informal speech' or 'Keep English technical terms')...",
+      "twoPass": "2-Pass Refinement",
+      "twoPassDesc": "Refine translations with a second pass. Slower but more consistent."
     },
     "models": {
       "title": "Models",
@@ -490,6 +510,8 @@
       "cpuOnly": "CPU Only",
       "tooLarge": "Insufficient VRAM",
       "notInstalled": "Not Installed",
+      "categoryGeneral": "General",
+      "categoryInstruct": "Instruct",
       "status": {
         "downloading": "Downloading",
         "verifying": "Verifying",

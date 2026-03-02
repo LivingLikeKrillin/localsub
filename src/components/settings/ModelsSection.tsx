@@ -243,6 +243,16 @@ export function ModelsSection({
                       {entry.name}
                     </Label>
                     <span className="text-[10px] text-muted-foreground font-mono">{entry.quant}</span>
+                    {entry.model_category === "instruct" && (
+                      <Badge variant="secondary" className="text-[10px] h-4">
+                        {t("settings.models.categoryInstruct")}
+                      </Badge>
+                    )}
+                    {entry.model_category === "general" && (
+                      <Badge variant="outline" className="text-[10px] h-4">
+                        {t("settings.models.categoryGeneral")}
+                      </Badge>
+                    )}
                     {entry.id === activeLlmModel && (
                       <Badge variant="default" className="text-[10px] h-5 gap-1">
                         <CheckCircle2 className="h-3 w-3" />

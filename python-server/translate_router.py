@@ -24,6 +24,10 @@ class TranslateStartRequest(BaseModel):
     glossary: list[GlossaryEntryRequest] = []
     model_id: str | None = None
     n_gpu_layers: int | None = None
+    translation_quality: str = "balanced"
+    custom_prompt: str | None = None
+    two_pass: bool = False
+    model_category: str = "general"
 
 
 class TranslateStartResponse(BaseModel):
@@ -42,6 +46,10 @@ async def start_translate(request: TranslateStartRequest):
         glossary=glossary,
         model_id=request.model_id,
         n_gpu_layers=request.n_gpu_layers,
+        translation_quality=request.translation_quality,
+        custom_prompt=request.custom_prompt,
+        two_pass=request.two_pass,
+        model_category=request.model_category,
     )
     return TranslateStartResponse(job_id=job_id)
 

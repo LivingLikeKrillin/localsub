@@ -64,18 +64,20 @@ pub async fn start_translate(
                 .map(|m| m.id.clone())
         });
 
-    // Look up n_gpu_layers_default from catalog for the selected model
-    let n_gpu_layers: Option<i32> = llm_model_id.as_ref().and_then(|model_id| {
-        commands_model::load_catalog(&app)
-            .ok()
-            .and_then(|catalog| {
-                catalog
-                    .llm_models
-                    .iter()
-                    .find(|m| m.id == *model_id)
-                    .map(|m| m.n_gpu_layers_default)
-            })
+    // Look up n_gpu_layers_default and model_category from catalog for the selected model
+    let catalog_opt = commands_model::load_catalog(&app).ok();
+    let catalog_entry = llm_model_id.as_ref().and_then(|model_id| {
+        catalog_opt.as_ref().and_then(|catalog| {
+            catalog
+                .llm_models
+                .iter()
+                .find(|m| m.id == *model_id)
+        })
     });
+    let n_gpu_layers: Option<i32> = catalog_entry.map(|m| m.n_gpu_layers_default);
+    let model_category = catalog_entry
+        .and_then(|m| m.model_category.clone())
+        .unwrap_or_else(|| "general".to_string());
 
     // Build segment payload for Python
     let segment_payload: Vec<serde_json::Value> = segments
@@ -116,6 +118,18 @@ pub async fn start_translate(
     if let Some(layers) = n_gpu_layers {
         body["n_gpu_layers"] = serde_json::json!(layers);
     }
+
+    // Translation quality settings
+    body["translation_quality"] = serde_json::json!(
+        config.translation_quality.as_deref().unwrap_or("balanced")
+    );
+    if let Some(ref prompt) = config.custom_translation_prompt {
+        body["custom_prompt"] = serde_json::json!(prompt);
+    }
+    let two_pass = config.two_pass_translation
+        .unwrap_or_else(|| config.translation_quality.as_deref() == Some("best"));
+    body["two_pass"] = serde_json::json!(two_pass);
+    body["model_category"] = serde_json::json!(model_category);
 
     // POST /translate/start
     let client = reqwest::Client::new();

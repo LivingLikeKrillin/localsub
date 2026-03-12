@@ -63,6 +63,8 @@
       "startMultiple": "{{count}}개 작업 시작",
       "supportedFormats": "MP4, MKV, AVI, MOV, MP3, WAV",
       "linkedVocab": "연결된 용어사전:",
+      "skipTranslation": "음성 인식만",
+      "skipTranslationDesc": "음성 인식만 수행하고 번역 단계를 건너뜁니다",
       "enableDiarization": "화자 검출",
       "enableDiarizationDesc": "오디오에서 서로 다른 화자를 감지하고 라벨을 지정합니다"
     }

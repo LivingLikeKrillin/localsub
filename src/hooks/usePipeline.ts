@@ -50,6 +50,7 @@ interface ActivePipeline {
   translations: Map<number, string>;
   speakerMap: Map<number, string>;
   enableDiarization: boolean;
+  skipTranslation: boolean;
   filePath: string;
   phase: "stt" | "diarizing" | "translating" | "done" | "error";
 }
@@ -85,7 +86,9 @@ export function usePipeline(
         // Match STT job
         if (pipeline.sttJobId === job.id) {
           if (job.state === "RUNNING") {
-            const progressScale = pipeline.enableDiarization ? 0.4 : 0.5;
+            const progressScale = pipeline.skipTranslation
+              ? (pipeline.enableDiarization ? 0.4 : 1.0)
+              : (pipeline.enableDiarization ? 0.4 : 0.5);
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "stt",
@@ -95,6 +98,9 @@ export function usePipeline(
             if (pipeline.enableDiarization) {
               pipeline.phase = "diarizing";
               chainDiarization(pipeline);
+            } else if (pipeline.skipTranslation) {
+              pipeline.phase = "done";
+              finalizePipeline(pipeline);
             } else {
               pipeline.phase = "translating";
               chainTranslation(pipeline);
@@ -121,19 +127,32 @@ export function usePipeline(
         // Match diarization job
         if (pipeline.diarizationJobId === job.id) {
           if (job.state === "RUNNING") {
+            const diarScale = pipeline.skipTranslation ? 0.6 : 0.1;
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "diarizing",
-              progress: 40 + Math.round(job.progress * 0.1),
+              progress: 40 + Math.round(job.progress * diarScale),
             });
           } else if (job.state === "DONE") {
-            pipeline.phase = "translating";
-            chainTranslation(pipeline);
+            if (pipeline.skipTranslation) {
+              pipeline.phase = "done";
+              finalizePipeline(pipeline);
+            } else {
+              pipeline.phase = "translating";
+              chainTranslation(pipeline);
+            }
           } else if (job.state === "FAILED") {
-            // Diarization failed — skip and continue to translation (graceful fallback)
-            console.warn("Diarization failed, skipping to translation");
-            pipeline.phase = "translating";
-            chainTranslation(pipeline);
+            if (pipeline.skipTranslation) {
+              // Diarization failed, no translation — finalize with STT results
+              console.warn("Diarization failed, finalizing with STT only");
+              pipeline.phase = "done";
+              finalizePipeline(pipeline);
+            } else {
+              // Diarization failed — skip and continue to translation (graceful fallback)
+              console.warn("Diarization failed, skipping to translation");
+              pipeline.phase = "translating";
+              chainTranslation(pipeline);
+            }
           } else if (job.state === "CANCELED") {
             pipelinesRef.current.delete(pipeline.dashboardJobId);
             onJobUpdate(pipeline.dashboardJobId, {
@@ -232,9 +251,13 @@ export function usePipeline(
 
   async function chainDiarization(pipeline: ActivePipeline) {
     if (pipeline.segments.length === 0) {
-      // No segments — skip diarization
-      pipeline.phase = "translating";
-      chainTranslation(pipeline);
+      if (pipeline.skipTranslation) {
+        pipeline.phase = "done";
+        finalizePipeline(pipeline);
+      } else {
+        pipeline.phase = "translating";
+        chainTranslation(pipeline);
+      }
       return;
     }
 
@@ -254,10 +277,15 @@ export function usePipeline(
       const job = await startDiarization(pipeline.filePath, diarSegments);
       pipeline.diarizationJobId = job.id;
     } catch {
-      // Diarization start failed — skip to translation (graceful fallback)
-      console.warn("Diarization start failed, skipping to translation");
-      pipeline.phase = "translating";
-      chainTranslation(pipeline);
+      // Diarization start failed — graceful fallback
+      console.warn("Diarization start failed, skipping to next phase");
+      if (pipeline.skipTranslation) {
+        pipeline.phase = "done";
+        finalizePipeline(pipeline);
+      } else {
+        pipeline.phase = "translating";
+        chainTranslation(pipeline);
+      }
     }
   }
 
@@ -314,7 +342,7 @@ export function usePipeline(
   }
 
   const processJob = useCallback(
-    async (dashboardJobId: string, filePath: string, sourceLanguage?: string, enableDiarization?: boolean) => {
+    async (dashboardJobId: string, filePath: string, sourceLanguage?: string, enableDiarization?: boolean, skipTranslation?: boolean) => {
       const pipeline: ActivePipeline = {
         dashboardJobId,
         sttJobId: null,
@@ -324,6 +352,7 @@ export function usePipeline(
         translations: new Map(),
         speakerMap: new Map(),
         enableDiarization: enableDiarization ?? false,
+        skipTranslation: skipTranslation ?? false,
         filePath,
         phase: "stt",
       };
@@ -365,6 +394,7 @@ export function usePipeline(
         translations: new Map(),
         speakerMap: new Map(),
         enableDiarization: false,
+        skipTranslation: false,
         filePath: "",
         phase: "translating",
       };

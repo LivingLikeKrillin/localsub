@@ -45,7 +45,7 @@ interface DashboardPageProps {
   jobs: DashboardJob[]
   presets: Preset[]
   vocabularies: Vocabulary[]
-  onNewJob: (files: SelectedFile[], presetId: string, enableDiarization: boolean) => void
+  onNewJob: (files: SelectedFile[], presetId: string, enableDiarization: boolean, skipTranslation: boolean) => void
   onRemoveJob: (id: string) => void
   onRetryJob?: (jobId: string) => void
   onOpenEditor?: (jobId: string, filePath: string) => void

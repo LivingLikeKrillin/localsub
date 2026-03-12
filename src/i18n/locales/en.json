@@ -63,6 +63,8 @@
       "startMultiple": "Start {{count}} jobs",
       "supportedFormats": "MP4, MKV, AVI, MOV, MP3, WAV",
       "linkedVocab": "Linked vocabulary:",
+      "skipTranslation": "STT Only",
+      "skipTranslationDesc": "Transcribe only — skip the translation step",
       "enableDiarization": "Speaker Diarization",
       "enableDiarizationDesc": "Detect and label different speakers in the audio"
     }

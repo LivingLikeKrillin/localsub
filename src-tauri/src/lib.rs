@@ -1,6 +1,7 @@
 mod commands;
 mod commands_config;
 mod commands_csv;
+mod commands_diarization;
 mod commands_export;
 mod commands_job;
 mod commands_model;
@@ -82,6 +83,9 @@ pub fn run() {
             // STT commands
             commands_stt::start_stt,
             commands_stt::cancel_stt,
+            // Diarization commands
+            commands_diarization::start_diarization,
+            commands_diarization::cancel_diarization,
             // Translate commands
             commands_translate::start_translate,
             commands_translate::cancel_translate,

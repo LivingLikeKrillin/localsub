@@ -10,11 +10,13 @@ from inference import create_job, cancel_job, get_job, run_inference
 from stt_router import router as stt_router
 from translate_router import router as translate_router
 from runtime_router import router as runtime_router
+from diarization_router import router as diarization_router
 
 app = FastAPI(title="AI Inference Server")
 app.include_router(stt_router)
 app.include_router(translate_router)
 app.include_router(runtime_router)
+app.include_router(diarization_router)
 
 
 @app.get("/health")

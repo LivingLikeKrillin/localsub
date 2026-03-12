@@ -262,6 +262,110 @@ fn handle_stt_event(
     }
 }
 
+// ── Diarization stream handling ───────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct DiarizationSegmentEvent {
+    pub job_id: String,
+    pub index: u32,
+    pub speaker: String,
+}
+
+pub async fn subscribe_to_diarization_stream(app: AppHandle, job_id: String, port: u16) {
+    let url = format!("http://127.0.0.1:{}/diarization/stream/{}", port, job_id);
+    let mut es = EventSource::get(&url);
+
+    while let Some(event) = es.next().await {
+        match event {
+            Ok(Event::Open) => {
+                log::info!("Diarization SSE connection opened for job {}", job_id);
+            }
+            Ok(Event::Message(msg)) => {
+                let parsed: Result<serde_json::Value, _> = serde_json::from_str(&msg.data);
+                match parsed {
+                    Ok(value) => {
+                        let event_type = value.get("type").and_then(|v| v.as_str()).unwrap_or("");
+                        let should_close =
+                            handle_diarization_event(&app, &job_id, event_type, &value);
+                        if should_close {
+                            es.close();
+                            return;
+                        }
+                    }
+                    Err(e) => {
+                        log::error!("Failed to parse Diarization SSE event: {}", e);
+                    }
+                }
+            }
+            Err(err) => {
+                log::error!("Diarization SSE error for job {}: {}", job_id, err);
+                update_job_error(&app, &job_id, &format!("SSE connection error: {}", err));
+                es.close();
+                return;
+            }
+        }
+    }
+}
+
+fn handle_diarization_event(
+    app: &AppHandle,
+    job_id: &str,
+    event_type: &str,
+    value: &serde_json::Value,
+) -> bool {
+    match event_type {
+        "diar_progress" => {
+            let progress = value.get("progress").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
+            let message = value
+                .get("message")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            update_job_progress(app, job_id, progress, &message);
+            false
+        }
+        "diar_segment" => {
+            let seg = DiarizationSegmentEvent {
+                job_id: job_id.to_string(),
+                index: value.get("index").and_then(|v| v.as_u64()).unwrap_or(0) as u32,
+                speaker: value
+                    .get("speaker")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
+            };
+            let _ = app.emit("diar-segment", &seg);
+            false
+        }
+        "done" => {
+            let result = value
+                .get("result")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
+            update_job_done(app, job_id, &result, "Diarization complete");
+            true
+        }
+        "error" => {
+            let error = value
+                .get("error")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown error")
+                .to_string();
+            update_job_error(app, job_id, &error);
+            true
+        }
+        "cancelled" => {
+            update_job_cancelled(app, job_id, "Diarization cancelled");
+            true
+        }
+        _ => {
+            log::warn!("Unknown diarization event type: {}", event_type);
+            false
+        }
+    }
+}
+
 // ── Translate stream handling ─────────────────────────────────────
 
 #[derive(Debug, Clone, serde::Serialize)]

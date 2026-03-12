@@ -129,6 +129,26 @@ export async function cancelStt(jobId: string): Promise<void> {
   await invoke("cancel_stt", { jobId });
 }
 
+// ── Diarization commands ──
+
+export interface DiarSegmentInput {
+  index: number;
+  start: number;
+  end: number;
+  text: string;
+}
+
+export async function startDiarization(
+  filePath: string,
+  segments: DiarSegmentInput[],
+): Promise<Job> {
+  return invoke<Job>("start_diarization", { filePath, segments });
+}
+
+export async function cancelDiarization(jobId: string): Promise<void> {
+  await invoke("cancel_diarization", { jobId });
+}
+
 // ── Translate commands ──
 
 export async function startTranslate(

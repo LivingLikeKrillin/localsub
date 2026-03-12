@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { toastError } from "./lib/toast";
@@ -47,6 +47,14 @@ const PAGE_TITLES = {
   settings: { titleKey: "nav.settings" as const, descKey: "settings.description" as const },
 } satisfies Record<MainPage, { titleKey: string; descKey?: string }>;
 
+interface QueueEntry {
+  jobId: string;
+  filePath: string;
+  sourceLanguage?: string;
+  enableDiarization: boolean;
+  skipTranslation: boolean;
+}
+
 function App() {
   const { t } = useTranslation();
   const { config, loading: configLoading, error: configError, update: updateConfig, reload: reloadConfig } = useConfig();
@@ -64,6 +72,11 @@ function App() {
   const [editorJobId, setEditorJobId] = useState<string | null>(null);
   const [editorFilePath, setEditorFilePath] = useState<string | null>(null);
   const [liveLines, setLiveLines] = useState<Map<string, SubtitleLine[]>>(new Map());
+
+  // ── Job queue ──
+  const queueRef = useRef<QueueEntry[]>([]);
+  const activeCountRef = useRef(0);
+  const drainQueueRef = useRef(() => {});
 
   const handleJobUpdate = useCallback(
     (jobId: string, update: { status?: DashboardJob["status"]; stage?: DashboardJob["stage"]; progress?: number; error?: string }) => {
@@ -99,7 +112,7 @@ function App() {
           }
         }).catch(() => { /* notification not critical */ });
       }
-      // Clear liveLines when pipeline finishes
+      // Clear liveLines and drain queue when pipeline finishes
       if (update.status === "completed" || update.status === "failed") {
         setLiveLines((prev) => {
           if (!prev.has(jobId)) return prev;
@@ -107,6 +120,9 @@ function App() {
           next.delete(jobId);
           return next;
         });
+        activeCountRef.current = Math.max(0, activeCountRef.current - 1);
+        // Use setTimeout to ensure drainQueue runs after state updates
+        setTimeout(() => drainQueueRef.current(), 0);
       }
     },
     [],
@@ -121,6 +137,16 @@ function App() {
   }, []);
 
   const { processJob, retryTranslation } = usePipeline(handleJobUpdate, handleLiveSegments);
+
+  const drainQueue = useCallback(() => {
+    const maxConcurrent = config?.max_concurrent_jobs ?? 1;
+    while (queueRef.current.length > 0 && activeCountRef.current < maxConcurrent) {
+      const entry = queueRef.current.shift()!;
+      activeCountRef.current++;
+      processJob(entry.jobId, entry.filePath, entry.sourceLanguage, entry.enableDiarization, entry.skipTranslation);
+    }
+  }, [processJob, config?.max_concurrent_jobs]);
+  drainQueueRef.current = drainQueue;
 
   const screen = determineScreen(configLoading, config, setupStatus);
 
@@ -192,16 +218,24 @@ function App() {
         setActivePage("editor");
       }
 
-      // Trigger pipeline for each job
+      // Enqueue jobs and drain up to concurrency limit
       const sourceLanguage = config?.source_language;
       for (const job of newJobs) {
-        processJob(job.id, job.file_path, sourceLanguage === "auto" ? undefined : sourceLanguage, enableDiarization, skipTranslation);
+        queueRef.current.push({
+          jobId: job.id,
+          filePath: job.file_path,
+          sourceLanguage: sourceLanguage === "auto" ? undefined : sourceLanguage,
+          enableDiarization,
+          skipTranslation,
+        });
       }
+      drainQueue();
     },
-    [processJob, config?.source_language],
+    [drainQueue, config?.source_language],
   );
 
   const handleRemoveJob = useCallback((id: string) => {
+    queueRef.current = queueRef.current.filter((e) => e.jobId !== id);
     setDashboardJobs((prev) => prev.filter((j) => j.id !== id));
   }, []);
 
@@ -215,6 +249,7 @@ function App() {
         const existing = await loadJobSubtitles(jobId);
         if (existing.length > 0 && existing[0].original_text) {
           // Has STT results — retry translation only
+          activeCountRef.current++;
           setDashboardJobs((prev) =>
             prev.map((j) =>
               j.id === jobId
@@ -238,14 +273,21 @@ function App() {
       setDashboardJobs((prev) =>
         prev.map((j) =>
           j.id === jobId
-            ? { ...j, status: "processing" as const, stage: "stt" as const, progress: 0, error: undefined, completed_at: undefined }
+            ? { ...j, status: "pending" as const, stage: "stt" as const, progress: 0, error: undefined, completed_at: undefined }
             : j,
         ),
       );
       const sourceLanguage = config?.source_language;
-      processJob(job.id, job.file_path, sourceLanguage === "auto" ? undefined : sourceLanguage);
+      queueRef.current.push({
+        jobId: job.id,
+        filePath: job.file_path,
+        sourceLanguage: sourceLanguage === "auto" ? undefined : sourceLanguage,
+        enableDiarization: false,
+        skipTranslation: false,
+      });
+      drainQueue();
     },
-    [dashboardJobs, processJob, retryTranslation, config?.source_language],
+    [dashboardJobs, drainQueue, retryTranslation, config?.source_language],
   );
 
   // ── Config error screen ──

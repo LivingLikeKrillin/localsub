@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::error::AppError;
 
-pub const APP_ID: &str = "com.subtext.app";
+pub const APP_ID: &str = "com.localsub.app";
 
 pub fn app_data_dir() -> Result<PathBuf, AppError> {
     let base = dirs::config_dir()
@@ -38,12 +38,12 @@ mod tests {
 
     #[test]
     fn test_app_id_value() {
-        assert_eq!(APP_ID, "com.subtext.app");
+        assert_eq!(APP_ID, "com.localsub.app");
     }
 
     #[test]
     fn test_atomic_write_roundtrip() {
-        let dir = std::env::temp_dir().join("subtext_utils_test");
+        let dir = std::env::temp_dir().join("localsub_utils_test");
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 

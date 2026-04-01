@@ -55,15 +55,30 @@ pub async fn download_file(
     // Build request with optional Range header
     let mut req = client.get(url);
     if existing_size > 0 {
+        log::info!("Resuming download from {} bytes: {}", existing_size, url);
         req = req.header(header::RANGE, format!("bytes={}-", existing_size));
+    } else {
+        log::info!("Starting download: {}", url);
     }
 
     let response = req
         .send()
         .await
-        .map_err(|e| AppError::Download(format!("HTTP request failed: {}", e)))?;
+        .map_err(|e| {
+            log::error!("HTTP request failed for {}: {}", url, e);
+            AppError::Download(format!("HTTP request failed: {}", e))
+        })?;
 
     let status = response.status();
+    log::info!("HTTP {} for {}", status, url);
+
+    // 416 Range Not Satisfiable = file already fully downloaded
+    if status == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && existing_size > 0 {
+        log::info!("File already complete ({} bytes): {:?}", existing_size, dest);
+        progress_cb(existing_size, existing_size, 0, 0.0);
+        return Ok(());
+    }
+
     if !status.is_success() && status != reqwest::StatusCode::PARTIAL_CONTENT {
         return Err(AppError::Download(format!(
             "HTTP {} for {}",
@@ -117,12 +132,16 @@ pub async fn download_file(
     while let Some(chunk_result) = stream.next().await {
         // Check cancellation
         if cancel.is_cancelled() {
+            log::info!("Download cancelled by user: {:?}", dest);
             writer.flush().await.ok();
             return Err(AppError::Download("Download cancelled".to_string()));
         }
 
         let chunk = chunk_result
-            .map_err(|e| AppError::Download(format!("Stream error: {}", e)))?;
+            .map_err(|e| {
+                log::error!("Stream error for {:?}: {}", dest, e);
+                AppError::Download(format!("Stream error: {}", e))
+            })?;
 
         writer
             .write_all(&chunk)
@@ -164,6 +183,14 @@ pub async fn download_file(
         0
     };
     progress_cb(downloaded, total, avg_speed, 0.0);
+
+    log::info!(
+        "Download complete: {:?} ({} bytes in {:.1}s, avg {:.1} MB/s)",
+        dest,
+        downloaded,
+        elapsed,
+        avg_speed as f64 / 1_048_576.0
+    );
 
     Ok(())
 }
@@ -213,6 +240,10 @@ pub async fn download_whisper_model(
     cancel: CancellationToken,
 ) -> Result<(), AppError> {
     let total_files = model.files.len() as u32;
+    log::info!(
+        "Starting whisper model download: {} ({} files, repo: {})",
+        model.id, total_files, model.repo
+    );
 
     tokio::fs::create_dir_all(dest_dir)
         .await
@@ -290,6 +321,13 @@ pub async fn download_llm_model(
     dest_dir: &Path,
     cancel: CancellationToken,
 ) -> Result<(), AppError> {
+    log::info!(
+        "Starting LLM model download: {} ({:.1} GB, repo: {})",
+        model.id,
+        model.size_bytes as f64 / 1_073_741_824.0,
+        model.repo
+    );
+
     tokio::fs::create_dir_all(dest_dir)
         .await
         .map_err(|e| AppError::Download(format!("Failed to create model dir: {}", e)))?;

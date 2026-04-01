@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_empty_manifest_roundtrip() {
-        let dir = std::env::temp_dir().join("subtext_manifest_test_1");
+        let dir = std::env::temp_dir().join("localsub_manifest_test_1");
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
 

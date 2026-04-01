@@ -1,11 +1,11 @@
 import { cn } from "@/lib/utils"
 
-interface SubTextLogoProps {
+interface LocalSubLogoProps {
   size?: "sm" | "md" | "lg"
   className?: string
 }
 
-export function SubTextLogo({ size = "md", className }: SubTextLogoProps) {
+export function LocalSubLogo({ size = "md", className }: LocalSubLogoProps) {
   const sizeMap = {
     sm: "h-8 w-8",
     md: "h-9 w-9",
@@ -16,7 +16,7 @@ export function SubTextLogo({ size = "md", className }: SubTextLogoProps) {
     <svg
       viewBox="0 0 48 48"
       xmlns="http://www.w3.org/2000/svg"
-      aria-label="SubText"
+      aria-label="LocalSub"
       className={cn("shrink-0 text-primary", sizeMap[size], className)}
     >
       <path

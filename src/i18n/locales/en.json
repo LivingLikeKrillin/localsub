@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "SubText",
+    "title": "LocalSub",
     "loading": "Loading..."
   },
   "nav": {
@@ -203,6 +203,7 @@
       "description": "Description",
       "whisperModel": "Whisper Model",
       "llmModel": "LLM Model",
+      "noModelsInstalled": "No models installed",
       "sourceLang": "Source Language",
       "targetLang": "Target Language",
       "outputFormat": "Output Format",
@@ -247,8 +248,8 @@
     "back": "Back",
     "next": "Next",
     "welcome": {
-      "title": "Welcome to SubText",
-      "description": "SubText transcribes and translates audio/video subtitles using local AI models. Let's set up your environment in a few quick steps.",
+      "title": "Welcome to LocalSub",
+      "description": "LocalSub transcribes and translates audio/video subtitles using local AI models. Let's set up your environment in a few quick steps.",
       "getStarted": "Get Started",
       "skip": "Skip setup wizard"
     },
@@ -296,7 +297,7 @@
       "installing": "Installing dependencies...",
       "verifying": "Verifying files...",
       "complete": "Setup Complete!",
-      "startUsing": "Start Using SubText",
+      "startUsing": "Start Using LocalSub",
       "error": "Installation Failed",
       "retry": "Retry"
     }

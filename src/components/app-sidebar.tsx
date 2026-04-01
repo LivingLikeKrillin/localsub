@@ -10,7 +10,7 @@ import {
   ChevronsLeft,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
-import { SubTextLogo } from "@/components/subtext-logo"
+import { LocalSubLogo } from "@/components/localsub-logo"
 import { useTheme } from "@/components/theme-provider"
 import {
   Sidebar,
@@ -64,12 +64,12 @@ export function AppSidebar({
           <button
             onClick={() => collapsed ? toggleSidebar() : onNavigate("dashboard")}
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-sidebar-accent transition-colors"
-            title={collapsed ? "Expand sidebar" : "SubText"}
+            title={collapsed ? "Expand sidebar" : "LocalSub"}
           >
-            <SubTextLogo size="sm" />
+            <LocalSubLogo size="sm" />
           </button>
           <span className="text-lg font-semibold tracking-tight whitespace-nowrap transition-opacity duration-300 ease-in-out group-data-[collapsible=icon]:opacity-0">
-            SubText
+            LocalSub
           </span>
           <button
             onClick={toggleSidebar}

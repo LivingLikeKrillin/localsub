@@ -81,7 +81,7 @@ pub fn format_vtt(segments: &[SubtitleSegment]) -> String {
 
 pub fn format_ass(segments: &[SubtitleSegment]) -> String {
     let header = "[Script Info]\n\
-        Title: SubText Export\n\
+        Title: LocalSub Export\n\
         ScriptType: v4.00+\n\
         PlayResX: 1920\n\
         PlayResY: 1080\n\

@@ -343,7 +343,11 @@ impl Default for AppState {
             jobs: HashMap::new(),
             setup_status: SetupStatus::CHECKING,
             app_config: None,
-            http_client: reqwest::Client::new(),
+            http_client: reqwest::Client::builder()
+                .connect_timeout(std::time::Duration::from_secs(30))
+                .read_timeout(std::time::Duration::from_secs(300))
+                .build()
+                .unwrap_or_else(|_| reqwest::Client::new()),
             active_downloads: HashMap::new(),
             runtime_status: RuntimeStatus::default(),
             poll_cancel: None,

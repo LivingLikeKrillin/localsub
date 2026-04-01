@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { useTranslation } from "react-i18next"
-import { Download, Trash2, CheckCircle2, Cpu, Monitor, Globe } from "lucide-react"
+import { Download, Trash2, CheckCircle2, Cpu, Monitor, Globe, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Progress } from "@/components/ui/progress"
 import type {
   ModelManifestEntry,
   ModelCatalog,
@@ -23,6 +24,7 @@ import type {
   LlmModelEntry,
   Profile,
   PartialConfig,
+  DownloadProgress,
 } from "@/types"
 
 type InstallStatus = ModelManifestEntry["status"] | "not_installed"
@@ -32,12 +34,14 @@ interface ModelsSectionProps {
   manifest: ModelManifestEntry[]
   catalog: ModelCatalog | null
   hardware: HardwareInfo | null
+  downloads: Map<string, DownloadProgress>
   profile: Profile
   activeWhisperModel: string | null
   activeLlmModel: string | null
   onUpdate: (patch: PartialConfig) => void
   onDelete: (id: string) => void
   onDownload: (id: string) => void
+  onCancelDownload: (id: string) => void
   sourceLanguage?: string
   targetLanguage?: string
 }
@@ -58,6 +62,19 @@ function formatSize(bytes: number): string {
 
 function formatVram(mb: number): string {
   return `${(mb / 1024).toFixed(1)} GB`
+}
+
+function formatSpeed(bps: number): string {
+  if (bps >= 1e6) return `${(bps / 1e6).toFixed(1)} MB/s`
+  if (bps >= 1e3) return `${(bps / 1e3).toFixed(0)} KB/s`
+  return `${bps} B/s`
+}
+
+function formatEta(secs: number): string {
+  if (secs <= 0) return ""
+  if (secs < 60) return `${Math.ceil(secs)}s`
+  if (secs < 3600) return `${Math.floor(secs / 60)}m ${Math.ceil(secs % 60)}s`
+  return `${Math.floor(secs / 3600)}h ${Math.floor((secs % 3600) / 60)}m`
 }
 
 const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
@@ -88,12 +105,14 @@ export function ModelsSection({
   manifest,
   catalog,
   hardware,
+  downloads,
   profile,
   activeWhisperModel,
   activeLlmModel,
   onUpdate,
   onDelete,
   onDownload,
+  onCancelDownload,
   sourceLanguage,
   targetLanguage,
 }: ModelsSectionProps) {
@@ -152,6 +171,34 @@ export function ModelsSection({
     )
   }
 
+  function renderDownloadProgress(id: string) {
+    const progress = downloads.get(id)
+    if (!progress || progress.total === 0) {
+      return (
+        <div className="flex items-center gap-2 mt-2">
+          <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+          <span className="text-xs text-muted-foreground">{t("settings.models.status.verifying")}</span>
+        </div>
+      )
+    }
+    const pct = Math.min((progress.downloaded / progress.total) * 100, 100)
+    const fileLabel = progress.total_files > 1
+      ? `(${progress.file_index + 1}/${progress.total_files}) ${progress.file_name}`
+      : progress.file_name
+    return (
+      <div className="flex flex-col gap-1.5 mt-2 w-full">
+        <Progress value={pct} className="h-2" />
+        <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+          <span>{fileLabel} — {pct.toFixed(1)}%</span>
+          <span>
+            {formatSpeed(progress.speed_bps)}
+            {progress.eta_secs > 0 && ` · ${formatEta(progress.eta_secs)}`}
+          </span>
+        </div>
+      </div>
+    )
+  }
+
   function renderActions(id: string, status: InstallStatus) {
     if (status === "ready") {
       return (
@@ -162,6 +209,18 @@ export function ModelsSection({
           onClick={() => setDeleteTarget(id)}
         >
           <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )
+    }
+    if (status === "downloading") {
+      return (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7 text-muted-foreground hover:text-destructive"
+          onClick={() => onCancelDownload(id)}
+        >
+          <X className="h-3.5 w-3.5" />
         </Button>
       )
     }
@@ -189,36 +248,40 @@ export function ModelsSection({
           {models.map((entry) => {
             const status = getStatus(entry.id)
             const canActivate = status === "ready"
+            const isDownloading = status === "downloading"
             const fit = getWhisperFit(entry, profile)
             return (
               <div
                 key={entry.id}
-                className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/30"
+                className="flex flex-col rounded-lg border p-3 transition-colors hover:bg-muted/30"
               >
-                {canActivate && (
-                  <RadioGroupItem value={entry.id} id={`model-${entry.id}`} />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={`model-${entry.id}`} className="text-sm font-medium cursor-pointer">
-                      {entry.name}
-                    </Label>
-                    {entry.id === activeWhisperModel && (
-                      <Badge variant="default" className="text-[10px] h-5 gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {t("settings.models.active")}
-                      </Badge>
-                    )}
+                <div className="flex items-center gap-3">
+                  {canActivate && (
+                    <RadioGroupItem value={entry.id} id={`model-${entry.id}`} />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`model-${entry.id}`} className="text-sm font-medium cursor-pointer">
+                        {entry.name}
+                      </Label>
+                      {entry.id === activeWhisperModel && (
+                        <Badge variant="default" className="text-[10px] h-5 gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          {t("settings.models.active")}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+                      <span>{formatSize(entry.total_size_bytes)}</span>
+                      {renderStatusBadge(status)}
+                      {renderVramBadge(fit)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
-                    <span>{formatSize(entry.total_size_bytes)}</span>
-                    {renderStatusBadge(status)}
-                    {renderVramBadge(fit)}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {renderActions(entry.id, status)}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {renderActions(entry.id, status)}
-                </div>
+                {isDownloading && renderDownloadProgress(entry.id)}
               </div>
             )
           })}
@@ -240,54 +303,58 @@ export function ModelsSection({
           {models.map((entry) => {
             const status = getStatus(entry.id)
             const canActivate = status === "ready"
+            const isDownloading = status === "downloading"
             const fit = getLlmVramFit(entry.size_bytes, hardware)
             const showLangBadge = (sourceLanguage || targetLanguage) && isLangRecommended(entry.name)
             return (
               <div
                 key={entry.id}
-                className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/30"
+                className="flex flex-col rounded-lg border p-3 transition-colors hover:bg-muted/30"
               >
-                {canActivate && (
-                  <RadioGroupItem value={entry.id} id={`model-${entry.id}`} />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={`model-${entry.id}`} className="text-sm font-medium cursor-pointer">
-                      {entry.name}
-                    </Label>
-                    <span className="text-[10px] text-muted-foreground font-mono">{entry.quant}</span>
-                    {entry.model_category === "instruct" && (
-                      <Badge variant="secondary" className="text-[10px] h-4">
-                        {t("settings.models.categoryInstruct")}
-                      </Badge>
-                    )}
-                    {entry.model_category === "general" && (
-                      <Badge variant="outline" className="text-[10px] h-4">
-                        {t("settings.models.categoryGeneral")}
-                      </Badge>
-                    )}
-                    {showLangBadge && (
-                      <Badge variant="secondary" className="text-[10px] h-4 gap-0.5 bg-blue-600/20 text-blue-500">
-                        <Globe className="h-2.5 w-2.5" />
-                        {t("settings.models.langRecommended")}
-                      </Badge>
-                    )}
-                    {entry.id === activeLlmModel && (
-                      <Badge variant="default" className="text-[10px] h-5 gap-1">
-                        <CheckCircle2 className="h-3 w-3" />
-                        {t("settings.models.active")}
-                      </Badge>
-                    )}
+                <div className="flex items-center gap-3">
+                  {canActivate && (
+                    <RadioGroupItem value={entry.id} id={`model-${entry.id}`} />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`model-${entry.id}`} className="text-sm font-medium cursor-pointer">
+                        {entry.name}
+                      </Label>
+                      <span className="text-[10px] text-muted-foreground font-mono">{entry.quant}</span>
+                      {entry.model_category === "instruct" && (
+                        <Badge variant="secondary" className="text-[10px] h-4">
+                          {t("settings.models.categoryInstruct")}
+                        </Badge>
+                      )}
+                      {entry.model_category === "general" && (
+                        <Badge variant="outline" className="text-[10px] h-4">
+                          {t("settings.models.categoryGeneral")}
+                        </Badge>
+                      )}
+                      {showLangBadge && (
+                        <Badge variant="secondary" className="text-[10px] h-4 gap-0.5 bg-blue-600/20 text-blue-500">
+                          <Globe className="h-2.5 w-2.5" />
+                          {t("settings.models.langRecommended")}
+                        </Badge>
+                      )}
+                      {entry.id === activeLlmModel && (
+                        <Badge variant="default" className="text-[10px] h-5 gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          {t("settings.models.active")}
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+                      <span>{formatSize(entry.size_bytes)}</span>
+                      {renderStatusBadge(status)}
+                      {renderVramBadge(fit)}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
-                    <span>{formatSize(entry.size_bytes)}</span>
-                    {renderStatusBadge(status)}
-                    {renderVramBadge(fit)}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {renderActions(entry.id, status)}
                   </div>
                 </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  {renderActions(entry.id, status)}
-                </div>
+                {isDownloading && renderDownloadProgress(entry.id)}
               </div>
             )
           })}

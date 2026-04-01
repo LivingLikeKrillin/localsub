@@ -59,7 +59,14 @@ function App() {
   const { t } = useTranslation();
   const { config, loading: configLoading, error: configError, update: updateConfig, reload: reloadConfig } = useConfig();
   const { status: setupStatus, progress, error: setupError, startSetup, retry } = useSetup();
-  useServerStatus(); // keep active for pipeline
+  const serverHook = useServerStatus();
+
+  // Auto-start Python server when app loads
+  useEffect(() => {
+    if (serverHook.status === "STOPPED") {
+      serverHook.start();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useJobs(); // keep listener active
   useRuntime(); // keep polling active
   const models = useModels();
@@ -407,6 +414,7 @@ function App() {
                 <PresetsPage
                   presets={presetsHook.presets}
                   vocabularies={vocabulariesHook.vocabularies}
+                  manifest={models.manifest}
                   onAddPreset={presetsHook.add}
                   onUpdatePreset={presetsHook.update}
                   onRemovePreset={presetsHook.remove}
@@ -422,9 +430,11 @@ function App() {
                   manifest={models.manifest}
                   catalog={models.catalog}
                   hardware={hardware}
+                  downloads={models.downloads}
                   onUpdateConfig={(patch) => updateConfig(patch)}
                   onDeleteModel={models.deleteModel}
                   onDownloadModel={models.startDownload}
+                  onCancelDownload={models.cancelDownload}
                 />
               )}
             </div>

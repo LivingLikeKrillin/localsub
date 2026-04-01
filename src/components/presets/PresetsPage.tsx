@@ -63,7 +63,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { pickFile, readCsvFile } from "@/lib/tauriApi"
-import type { Preset, Vocabulary, VocabularyEntry } from "@/types"
+import type { Preset, Vocabulary, VocabularyEntry, ModelManifestEntry } from "@/types"
 
 const LANG_KEYS = ["ko", "en", "ja", "zh"] as const
 const STYLE_KEYS = ["formal", "casual", "honorific"] as const
@@ -228,12 +228,13 @@ function VocabCard({ vocab, onEdit, onDelete }: { vocab: Vocabulary; onEdit: () 
 // ─── Preset Dialog ───────────────────────────────────────────────
 
 function PresetDialog({
-  open, onOpenChange, initial, vocabularies, onSave,
+  open, onOpenChange, initial, vocabularies, manifest, onSave,
 }: {
   open: boolean
   onOpenChange: (v: boolean) => void
   initial?: Preset
   vocabularies: Vocabulary[]
+  manifest: ModelManifestEntry[]
   onSave: (data: Omit<Preset, "id" | "created_at" | "updated_at">) => void
 }) {
   const { t } = useTranslation()
@@ -294,9 +295,14 @@ function PresetDialog({
                 <Select value={whisperModel} onValueChange={setWhisperModel}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {["tiny", "base", "small", "medium", "large-v2", "large-v3"].map((m) => (
-                      <SelectItem key={m} value={m}>{m}</SelectItem>
-                    ))}
+                    {manifest
+                      .filter((m) => m.model_type === "whisper" && m.status === "ready")
+                      .map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      ))}
+                    {manifest.filter((m) => m.model_type === "whisper" && m.status === "ready").length === 0 && (
+                      <SelectItem value="" disabled>{t("presets.dialog.noModelsInstalled")}</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -305,8 +311,14 @@ function PresetDialog({
                 <Select value={llmModel} onValueChange={setLlmModel}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="qwen3-7b">Qwen3 7B</SelectItem>
-                    <SelectItem value="qwen3-14b">Qwen3 14B</SelectItem>
+                    {manifest
+                      .filter((m) => m.model_type === "llm" && m.status === "ready")
+                      .map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
+                      ))}
+                    {manifest.filter((m) => m.model_type === "llm" && m.status === "ready").length === 0 && (
+                      <SelectItem value="" disabled>{t("presets.dialog.noModelsInstalled")}</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -599,6 +611,7 @@ function VocabDialog({
 interface PresetsPageProps {
   presets: Preset[]
   vocabularies: Vocabulary[]
+  manifest: ModelManifestEntry[]
   onAddPreset: (preset: Preset) => Promise<unknown>
   onUpdatePreset: (preset: Preset) => Promise<unknown>
   onRemovePreset: (id: string) => Promise<unknown>
@@ -608,7 +621,7 @@ interface PresetsPageProps {
 }
 
 export function PresetsPage({
-  presets, vocabularies,
+  presets, vocabularies, manifest,
   onAddPreset, onUpdatePreset, onRemovePreset,
   onAddVocabulary, onUpdateVocabulary, onRemoveVocabulary,
 }: PresetsPageProps) {
@@ -745,7 +758,7 @@ export function PresetsPage({
         </TabsContent>
       </Tabs>
 
-      <PresetDialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen} initial={editingPreset} vocabularies={vocabularies} onSave={handleSavePreset} />
+      <PresetDialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen} initial={editingPreset} vocabularies={vocabularies} manifest={manifest} onSave={handleSavePreset} />
       <VocabDialog open={vocabDialogOpen} onOpenChange={setVocabDialogOpen} initial={editingVocab} onSave={handleSaveVocab} />
 
       <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>

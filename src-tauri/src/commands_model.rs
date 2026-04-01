@@ -173,7 +173,8 @@ pub async fn download_model(
                 }
             }
             Err(ref e) => {
-                let is_cancel = e.to_string().contains("cancelled");
+                let error_msg = e.to_string();
+                let is_cancel = error_msg.contains("cancelled");
                 if !is_cancel {
                     if let Ok(mut manifest) = manifest_manager::load_manifest(&config_clone) {
                         if let Some(entry) =
@@ -185,7 +186,12 @@ pub async fn download_model(
                         emit_manifest(&app_clone, &manifest);
                     }
                 }
-                // On cancel, keep "downloading" status so resume is intuitive
+                // Emit error event to frontend
+                let _ = app_clone.emit("download-error", serde_json::json!({
+                    "model_id": model_id_clone,
+                    "error": error_msg,
+                    "cancelled": is_cancel,
+                }));
                 log::error!("Download failed for {}: {}", model_id_clone, e);
             }
         }

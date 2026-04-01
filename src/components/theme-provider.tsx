@@ -27,7 +27,7 @@ interface ThemeProviderProps {
 export function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "subtext-theme",
+  storageKey = "localsub-theme",
 }: ThemeProviderProps) {
   const [theme, setThemeState] = React.useState<Theme>(() => {
     const stored = localStorage.getItem(storageKey)

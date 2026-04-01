@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "SubText",
+    "title": "LocalSub",
     "loading": "로딩 중..."
   },
   "nav": {
@@ -203,6 +203,7 @@
       "description": "설명",
       "whisperModel": "Whisper 모델",
       "llmModel": "LLM 모델",
+      "noModelsInstalled": "설치된 모델 없음",
       "sourceLang": "원본 언어",
       "targetLang": "번역 언어",
       "outputFormat": "출력 형식",
@@ -247,8 +248,8 @@
     "back": "이전",
     "next": "다음",
     "welcome": {
-      "title": "SubText에 오신 것을 환영합니다",
-      "description": "SubText는 로컬 AI 모델을 사용하여 오디오/비디오 자막을 생성하고 번역합니다. 몇 가지 간단한 단계로 환경을 설정해 보겠습니다.",
+      "title": "LocalSub에 오신 것을 환영합니다",
+      "description": "LocalSub는 로컬 AI 모델을 사용하여 오디오/비디오 자막을 생성하고 번역합니다. 몇 가지 간단한 단계로 환경을 설정해 보겠습니다.",
       "getStarted": "시작하기",
       "skip": "설정 마법사 건너뛰기"
     },
@@ -296,7 +297,7 @@
       "installing": "의존성 설치 중...",
       "verifying": "파일 검증 중...",
       "complete": "설정 완료!",
-      "startUsing": "SubText 시작하기",
+      "startUsing": "LocalSub 시작하기",
       "error": "설치 실패",
       "retry": "재시도"
     }

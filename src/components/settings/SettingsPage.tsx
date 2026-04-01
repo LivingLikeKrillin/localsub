@@ -27,7 +27,7 @@ import { ModelsSection } from "./ModelsSection"
 import { PerformanceSection } from "./PerformanceSection"
 import { SystemSection } from "./SystemSection"
 import { AboutSection } from "./AboutSection"
-import type { AppConfig, PartialConfig, ModelManifestEntry, ModelCatalog, HardwareInfo, SettingsTab } from "@/types"
+import type { AppConfig, PartialConfig, ModelManifestEntry, ModelCatalog, HardwareInfo, SettingsTab, DownloadProgress } from "@/types"
 
 const TABS: { value: SettingsTab; icon: typeof Settings2; labelKey: string }[] = [
   { value: "general", icon: Settings2, labelKey: "settings.tabs.general" },
@@ -43,9 +43,11 @@ interface SettingsPageProps {
   manifest: ModelManifestEntry[]
   catalog: ModelCatalog | null
   hardware: HardwareInfo | null
+  downloads: Map<string, DownloadProgress>
   onUpdateConfig: (partial: PartialConfig) => void
   onDeleteModel: (id: string) => void
   onDownloadModel: (id: string) => void
+  onCancelDownload: (id: string) => void
 }
 
 export function SettingsPage({
@@ -53,9 +55,11 @@ export function SettingsPage({
   manifest,
   catalog,
   hardware,
+  downloads,
   onUpdateConfig,
   onDeleteModel,
   onDownloadModel,
+  onCancelDownload,
 }: SettingsPageProps) {
   const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<SettingsTab>("general")
@@ -144,12 +148,14 @@ export function SettingsPage({
               manifest={manifest}
               catalog={catalog}
               hardware={hardware}
+              downloads={downloads}
               profile={config.profile}
               activeWhisperModel={config.active_whisper_model}
               activeLlmModel={config.active_llm_model}
               onUpdate={onUpdateConfig}
               onDelete={onDeleteModel}
               onDownload={onDownloadModel}
+              onCancelDownload={onCancelDownload}
               sourceLanguage={config.source_language}
               targetLanguage={config.target_language}
             />

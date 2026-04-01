@@ -70,7 +70,7 @@ def segments_to_vtt(segments: Sequence[dict]) -> str:
 def segments_to_ass(segments: Sequence[dict]) -> str:
     header = (
         "[Script Info]\n"
-        "Title: SubText Export\n"
+        "Title: LocalSub Export\n"
         "ScriptType: v4.00+\n"
         "PlayResX: 1920\n"
         "PlayResY: 1080\n"

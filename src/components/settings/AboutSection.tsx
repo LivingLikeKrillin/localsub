@@ -2,12 +2,12 @@ import { useState, useEffect } from "react"
 import { useTranslation } from "react-i18next"
 import { ExternalLink, RefreshCw, CheckCircle2, AlertCircle, Download } from "lucide-react"
 import { getVersion } from "@tauri-apps/api/app"
-import { SubTextLogo } from "@/components/subtext-logo"
+import { LocalSubLogo } from "@/components/localsub-logo"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { useUpdater } from "@/hooks/useUpdater"
 
-const GITHUB_REPO = "https://github.com/EisenHuang/subtext"
+const GITHUB_REPO = "https://github.com/EisenHuang/localsub"
 
 export function AboutSection() {
   const { t } = useTranslation()
@@ -25,9 +25,9 @@ export function AboutSection() {
       </div>
 
       <div className="flex items-center gap-4 rounded-lg border p-4">
-        <SubTextLogo size="md" />
+        <LocalSubLogo size="md" />
         <div>
-          <h4 className="text-sm font-semibold">SubText</h4>
+          <h4 className="text-sm font-semibold">LocalSub</h4>
           <p className="text-xs text-muted-foreground mt-0.5">{t("settings.about.version")} {version}</p>
           <p className="text-xs text-muted-foreground">{t("settings.about.tagline")}</p>
         </div>

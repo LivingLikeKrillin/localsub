@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react"
+import { useState, useMemo, useCallback, useEffect } from "react"
 import { Plus, Trash2, FileVideo, Clock, Filter, MoreHorizontal, RotateCcw, Search, ArrowUpDown, PenLine, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toastInfo, toastError } from "@/lib/toast"
@@ -112,38 +112,53 @@ export function DashboardPage({
   const [isDraggingOver, setIsDraggingOver] = useState(false)
   const [droppedFiles, setDroppedFiles] = useState<SelectedFile[] | undefined>(undefined)
 
+  const MEDIA_EXTENSIONS = new Set(["mp4", "mkv", "avi", "mov", "webm", "mp3", "wav", "m4a", "flac", "ogg", "aac"])
+
+  // Tauri native drag-and-drop: provides full file paths
+  useEffect(() => {
+    let unlisten: (() => void) | undefined
+    import("@tauri-apps/api/webviewWindow").then(({ getCurrentWebviewWindow }) => {
+      getCurrentWebviewWindow().onDragDropEvent((event) => {
+        if (event.payload.type === "over") {
+          setIsDraggingOver(true)
+        } else if (event.payload.type === "leave") {
+          setIsDraggingOver(false)
+        } else if (event.payload.type === "drop") {
+          setIsDraggingOver(false)
+          const mediaFiles = event.payload.paths
+            .filter((p) => {
+              const ext = p.split(".").pop()?.toLowerCase() ?? ""
+              return MEDIA_EXTENSIONS.has(ext)
+            })
+            .map((p) => ({
+              name: p.split(/[/\\]/).pop() ?? p,
+              path: p,
+              size: 0,
+            }))
+          if (mediaFiles.length > 0) {
+            setDroppedFiles(mediaFiles)
+            setNewJobOpen(true)
+          }
+        }
+      }).then((fn) => { unlisten = fn })
+    })
+    return () => { unlisten?.() }
+  }, [])
+
+  // Fallback: prevent default browser drop behavior
   const handlePageDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    if (e.dataTransfer.types.includes("Files")) {
-      setIsDraggingOver(true)
-    }
   }, [])
 
   const handlePageDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    // Only set false if leaving the container (not entering a child)
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    const { clientX, clientY } = e
-    if (clientX <= rect.left || clientX >= rect.right || clientY <= rect.top || clientY >= rect.bottom) {
-      setIsDraggingOver(false)
-    }
   }, [])
 
   const handlePageDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    setIsDraggingOver(false)
-    // Web File API does not expose full file paths (security restriction).
-    // Open the NewJobDialog so the user can pick files via the Tauri file dialog
-    // which does provide full absolute paths needed by the STT pipeline.
-    const hasMedia = Array.from(e.dataTransfer.files).some(
-      (f) => f.type.startsWith("video/") || f.type.startsWith("audio/"),
-    )
-    if (hasMedia) {
-      setNewJobOpen(true)
-    }
   }, [])
 
   const filteredJobs = useMemo(() => {

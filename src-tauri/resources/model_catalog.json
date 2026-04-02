@@ -45,6 +45,15 @@
       "total_size_bytes": 3090000000,
       "sha256": { "model.bin": "69f74147e3334731bc3a76048724833325d2ec74642fb52620eda87352e3d4f1" },
       "profiles": ["power"]
+    },
+    {
+      "id": "qwen3-asr-1.7b",
+      "name": "Qwen3-ASR 1.7B (SOTA)",
+      "repo": "Qwen/Qwen3-ASR-1.7B",
+      "files": [],
+      "total_size_bytes": 3500000000,
+      "sha256": {},
+      "profiles": ["balanced", "power"]
     }
   ],
   "llm_models": [

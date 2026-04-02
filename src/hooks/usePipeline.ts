@@ -87,13 +87,10 @@ export function usePipeline(
         // Match STT job
         if (pipeline.sttJobId === job.id) {
           if (job.state === "RUNNING") {
-            const progressScale = pipeline.skipTranslation
-              ? (pipeline.enableDiarization ? 0.4 : 1.0)
-              : (pipeline.enableDiarization ? 0.4 : 0.5);
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "stt",
-              progress: Math.round(job.progress * progressScale),
+              progress: Math.round(job.progress),
             });
           } else if (job.state === "DONE") {
             // Clean STT output before passing to next stage
@@ -131,11 +128,10 @@ export function usePipeline(
         // Match diarization job
         if (pipeline.diarizationJobId === job.id) {
           if (job.state === "RUNNING") {
-            const diarScale = pipeline.skipTranslation ? 0.6 : 0.1;
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "diarizing",
-              progress: 40 + Math.round(job.progress * diarScale),
+              progress: Math.round(job.progress),
             });
           } else if (job.state === "DONE") {
             if (pipeline.skipTranslation) {
@@ -174,7 +170,7 @@ export function usePipeline(
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "translating",
-              progress: 50 + Math.round(job.progress * 0.5), // Translate is 50-100%
+              progress: Math.round(job.progress),
             });
           } else if (job.state === "DONE") {
             pipeline.phase = "done";
@@ -187,7 +183,7 @@ export function usePipeline(
             onJobUpdate(pipeline.dashboardJobId, {
               status: "failed",
               stage: "translating",
-              progress: 50,
+              progress: 0,
               error: job.message ?? "Translation failed",
             });
             pipelinesRef.current.delete(pipeline.dashboardJobId);

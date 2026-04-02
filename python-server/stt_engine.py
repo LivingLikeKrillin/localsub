@@ -1,11 +1,12 @@
-"""STT engine wrapping faster-whisper.
+"""STT engine supporting faster-whisper and Qwen3-ASR.
 
-Singleton model pattern: WhisperModel is loaded once into `_model` and reused
-across jobs to avoid 5-15 s reload per transcription.
+Singleton model pattern: model is loaded once and reused across jobs.
+Engine type is determined by model_id prefix.
 """
 
 import asyncio
 import json
+import logging
 import os
 import uuid
 from enum import Enum
@@ -19,11 +20,13 @@ except ImportError:
 
 import gpu_utils
 
+log = logging.getLogger(__name__)
 
 # ── Model singleton ────────────────────────────────────────────────
 
 _model: Any = None
 _loaded_model_id: str | None = None
+_engine_type: str | None = None  # "whisper" or "qwen3-asr"
 
 
 def _resolve_model_dir() -> Path:
@@ -38,14 +41,30 @@ def _find_whisper_model_path(model_id: str) -> Path | None:
     return None
 
 
-def load_model(model_id: str) -> bool:
-    global _model, _loaded_model_id
+def _is_qwen3_asr(model_id: str) -> bool:
+    return "qwen3-asr" in model_id.lower()
 
-    if WhisperModel is None:
-        raise RuntimeError("faster-whisper is not installed")
+
+def load_model(model_id: str) -> bool:
+    global _model, _loaded_model_id, _engine_type
 
     if _model is not None and _loaded_model_id == model_id:
         return True  # already loaded
+
+    # Unload previous model first
+    unload_model()
+
+    if _is_qwen3_asr(model_id):
+        return _load_qwen3_asr(model_id)
+    else:
+        return _load_whisper(model_id)
+
+
+def _load_whisper(model_id: str) -> bool:
+    global _model, _loaded_model_id, _engine_type
+
+    if WhisperModel is None:
+        raise RuntimeError("faster-whisper is not installed")
 
     model_path = _find_whisper_model_path(model_id)
     if model_path is None:
@@ -58,13 +77,60 @@ def load_model(model_id: str) -> bool:
         compute_type=compute_type,
     )
     _loaded_model_id = model_id
+    _engine_type = "whisper"
+    log.info("Loaded Whisper model: %s (device=%s)", model_id, device)
+    return True
+
+
+def _load_qwen3_asr(model_id: str) -> bool:
+    global _model, _loaded_model_id, _engine_type
+
+    try:
+        import torch
+        from qwen_asr import Qwen3ASRModel
+    except ImportError:
+        raise RuntimeError("qwen-asr is not installed. Run: pip install qwen-asr")
+
+    # Check if model is downloaded locally
+    model_dir = _resolve_model_dir() / model_id
+    if model_dir.exists() and any(model_dir.iterdir()):
+        model_path = str(model_dir)
+    else:
+        # Use HuggingFace model ID for auto-download
+        model_path = "Qwen/Qwen3-ASR-1.7B"
+
+    device = "cuda:0" if torch.cuda.is_available() else "cpu"
+    dtype = torch.bfloat16 if torch.cuda.is_available() else torch.float32
+
+    # Load with ForcedAligner for timestamps
+    try:
+        _model = Qwen3ASRModel.from_pretrained(
+            model_path,
+            dtype=dtype,
+            device_map=device,
+            forced_aligner="Qwen/Qwen3-ForcedAligner-0.6B",
+            forced_aligner_kwargs=dict(dtype=dtype, device_map=device),
+        )
+    except Exception:
+        # Fallback: load without ForcedAligner
+        log.warning("ForcedAligner failed to load, loading without timestamps")
+        _model = Qwen3ASRModel.from_pretrained(
+            model_path,
+            dtype=dtype,
+            device_map=device,
+        )
+
+    _loaded_model_id = model_id
+    _engine_type = "qwen3-asr"
+    log.info("Loaded Qwen3-ASR model: %s (device=%s)", model_id, device)
     return True
 
 
 def unload_model() -> None:
-    global _model, _loaded_model_id
+    global _model, _loaded_model_id, _engine_type
     _model = None
     _loaded_model_id = None
+    _engine_type = None
 
 
 def is_model_loaded() -> bool:
@@ -148,7 +214,7 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
 
     job["state"] = SttJobState.RUNNING
 
-    # Determine model_id — fallback to first available whisper model
+    # Determine model_id — fallback to first available model
     model_id = job.get("model_id")
     if not model_id:
         model_dir = _resolve_model_dir()
@@ -158,18 +224,19 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     model_id = d.name
                     break
     if not model_id:
-        yield {"type": "error", "job_id": job_id, "error": "No whisper model available"}
+        yield {"type": "error", "job_id": job_id, "error": "No STT model available"}
         job["state"] = SttJobState.FAILED
         cleanup_job(job_id)
         return
 
     # Load model if needed
     if not is_model_loaded() or _loaded_model_id != model_id:
+        engine_name = "Qwen3-ASR" if _is_qwen3_asr(model_id) else "Whisper"
         yield {
             "type": "stt_progress",
             "job_id": job_id,
             "progress": 0,
-            "message": "Loading Whisper model...",
+            "message": f"Loading {engine_name} model...",
         }
         try:
             await asyncio.get_running_loop().run_in_executor(None, load_model, model_id)
@@ -193,49 +260,156 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     }
 
     try:
-        file_path = job["file_path"]
-        language = job.get("language")
-        # language=None means auto-detect for faster-whisper
-        lang_arg = language if language and language != "auto" else None
+        if _engine_type == "qwen3-asr":
+            async for event in _run_qwen3_asr(job_id, job):
+                yield event
+        else:
+            async for event in _run_whisper(job_id, job):
+                yield event
+    except Exception as e:
+        job["state"] = SttJobState.FAILED
+        yield {"type": "error", "job_id": job_id, "error": str(e)}
+    finally:
+        cleanup_job(job_id)
+        _auto_purge_jobs()
 
-        # Run transcribe in executor to avoid blocking the event loop
-        loop = asyncio.get_running_loop()
-        segments_iter, info = await loop.run_in_executor(
-            None,
-            lambda: _model.transcribe(
-                file_path,
-                language=lang_arg,
-                beam_size=5,
-                vad_filter=True,
+
+async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any], None]:
+    """Run transcription with faster-whisper engine."""
+    file_path = job["file_path"]
+    language = job.get("language")
+    lang_arg = language if language and language != "auto" else None
+
+    loop = asyncio.get_running_loop()
+    segments_iter, info = await loop.run_in_executor(
+        None,
+        lambda: _model.transcribe(
+            file_path,
+            language=lang_arg,
+            beam_size=5,
+            word_timestamps=True,
+            vad_filter=True,
+            vad_parameters=dict(
+                max_speech_duration_s=15,
+                min_silence_duration_ms=300,
+                speech_pad_ms=200,
             ),
-        )
+            condition_on_previous_text=False,
+            no_speech_threshold=0.6,
+        ),
+    )
 
-        duration = info.duration if info.duration and info.duration > 0 else 1.0
-        all_segments: list[dict[str, Any]] = []
-        index = 0
+    duration = info.duration if info.duration and info.duration > 0 else 1.0
+    all_segments: list[dict[str, Any]] = []
+    index = 0
 
-        # Iterate segments (CPU-bound, yield after each)
-        def _consume_next(it):
-            try:
-                return next(it)
-            except StopIteration:
-                return None
+    def _consume_next(it):
+        try:
+            return next(it)
+        except StopIteration:
+            return None
 
-        while True:
+    while True:
+        if job["cancel_flag"]:
+            job["state"] = SttJobState.CANCELED
+            yield {"type": "cancelled", "job_id": job_id}
+            return
+
+        segment = await loop.run_in_executor(None, _consume_next, segments_iter)
+        if segment is None:
+            break
+
+        seg_data = {
+            "index": index,
+            "start": round(segment.start, 3),
+            "end": round(segment.end, 3),
+            "text": segment.text.strip(),
+        }
+        all_segments.append(seg_data)
+
+        yield {
+            "type": "stt_segment",
+            "job_id": job_id,
+            **seg_data,
+        }
+
+        progress = min(int((segment.end / duration) * 100), 99)
+        yield {
+            "type": "stt_progress",
+            "job_id": job_id,
+            "progress": progress,
+            "message": f"Transcribing... ({index + 1} segments)",
+        }
+
+        index += 1
+        await asyncio.sleep(0)
+
+    job["state"] = SttJobState.DONE
+    yield {
+        "type": "done",
+        "job_id": job_id,
+        "result": json.dumps(all_segments),
+    }
+
+
+async def _run_qwen3_asr(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any], None]:
+    """Run transcription with Qwen3-ASR engine."""
+    file_path = job["file_path"]
+    language = job.get("language")
+    lang_arg = language if language and language != "auto" else None
+
+    loop = asyncio.get_running_loop()
+
+    yield {
+        "type": "stt_progress",
+        "job_id": job_id,
+        "progress": 5,
+        "message": "Qwen3-ASR transcribing...",
+    }
+
+    # Qwen3-ASR transcribe (blocking call, run in executor)
+    def _transcribe():
+        kwargs = {"audio": file_path}
+        if lang_arg:
+            # Map language codes to Qwen3-ASR language names
+            lang_map = {
+                "ja": "Japanese", "en": "English", "ko": "Korean",
+                "zh": "Chinese", "es": "Spanish", "fr": "French",
+                "de": "German",
+            }
+            kwargs["language"] = lang_map.get(lang_arg, lang_arg)
+        kwargs["return_time_stamps"] = True
+        return _model.transcribe(**kwargs)
+
+    if job["cancel_flag"]:
+        job["state"] = SttJobState.CANCELED
+        yield {"type": "cancelled", "job_id": job_id}
+        return
+
+    results = await loop.run_in_executor(None, _transcribe)
+
+    if not results or len(results) == 0:
+        job["state"] = SttJobState.FAILED
+        yield {"type": "error", "job_id": job_id, "error": "Qwen3-ASR returned no results"}
+        return
+
+    result = results[0]
+    all_segments: list[dict[str, Any]] = []
+
+    # Check if timestamps are available
+    if hasattr(result, "time_stamps") and result.time_stamps:
+        # With ForcedAligner: word/segment level timestamps
+        for i, ts in enumerate(result.time_stamps):
             if job["cancel_flag"]:
                 job["state"] = SttJobState.CANCELED
                 yield {"type": "cancelled", "job_id": job_id}
                 return
 
-            segment = await loop.run_in_executor(None, _consume_next, segments_iter)
-            if segment is None:
-                break
-
             seg_data = {
-                "index": index,
-                "start": round(segment.start, 3),
-                "end": round(segment.end, 3),
-                "text": segment.text.strip(),
+                "index": i,
+                "start": round(ts.start_time, 3),
+                "end": round(ts.end_time, 3),
+                "text": ts.text.strip(),
             }
             all_segments.append(seg_data)
 
@@ -245,28 +419,45 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                 **seg_data,
             }
 
-            progress = min(int((segment.end / duration) * 100), 99)
+            progress = min(int(((i + 1) / len(result.time_stamps)) * 100), 99)
             yield {
                 "type": "stt_progress",
                 "job_id": job_id,
                 "progress": progress,
-                "message": f"Transcribing... ({index + 1} segments)",
+                "message": f"Processing segments... ({i + 1}/{len(result.time_stamps)})",
             }
 
-            index += 1
-            await asyncio.sleep(0)  # yield control
+            if i % 10 == 0:
+                await asyncio.sleep(0)
+    else:
+        # Without ForcedAligner: split full text into sentences
+        full_text = result.text.strip()
+        if full_text:
+            # Simple sentence splitting by punctuation
+            import re
+            sentences = re.split(r'(?<=[。！？.!?\n])\s*', full_text)
+            sentences = [s.strip() for s in sentences if s.strip()]
 
-        # Done
-        job["state"] = SttJobState.DONE
-        yield {
-            "type": "done",
-            "job_id": job_id,
-            "result": json.dumps(all_segments),
-        }
+            for i, sentence in enumerate(sentences):
+                seg_data = {
+                    "index": i,
+                    "start": 0.0,  # No timestamp info
+                    "end": 0.0,
+                    "text": sentence,
+                }
+                all_segments.append(seg_data)
 
-    except Exception as e:
-        job["state"] = SttJobState.FAILED
-        yield {"type": "error", "job_id": job_id, "error": str(e)}
-    finally:
-        cleanup_job(job_id)
-        _auto_purge_jobs()
+                yield {
+                    "type": "stt_segment",
+                    "job_id": job_id,
+                    **seg_data,
+                }
+
+            log.warning("Qwen3-ASR: no timestamps available, segments have no timing")
+
+    job["state"] = SttJobState.DONE
+    yield {
+        "type": "done",
+        "job_id": job_id,
+        "result": json.dumps(all_segments),
+    }

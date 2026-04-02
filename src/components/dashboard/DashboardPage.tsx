@@ -343,11 +343,27 @@ export function DashboardPage({
                   </TableCell>
                   <TableCell>
                     {job.status === "processing" ? (
-                      <div className="flex items-center gap-2.5 min-w-[120px]">
-                        <Progress value={job.progress} className="h-1.5 flex-1" />
-                        <span className="text-xs tabular-nums text-muted-foreground w-8 text-right">
-                          {job.progress}%
-                        </span>
+                      <div className="flex flex-col gap-1 min-w-[140px]">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-8 shrink-0">STT</span>
+                          <Progress
+                            value={job.stage === "stt" ? job.progress : 100}
+                            className="h-1.5 flex-1"
+                          />
+                          <span className="text-[10px] tabular-nums text-muted-foreground w-7 text-right">
+                            {job.stage === "stt" ? `${job.progress}%` : "100%"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-muted-foreground w-8 shrink-0">{t("dashboard.table.translate", "번역")}</span>
+                          <Progress
+                            value={job.stage === "translating" ? job.progress : job.stage === "stt" || job.stage === "diarizing" ? 0 : 100}
+                            className="h-1.5 flex-1"
+                          />
+                          <span className="text-[10px] tabular-nums text-muted-foreground w-7 text-right">
+                            {job.stage === "translating" ? `${job.progress}%` : job.stage === "stt" || job.stage === "diarizing" ? "—" : "100%"}
+                          </span>
+                        </div>
                       </div>
                     ) : job.status === "completed" ? (
                       <span className="text-xs text-muted-foreground">100%</span>

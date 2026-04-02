@@ -34,6 +34,15 @@ pub async fn start_translate(
         return Err(AppError::InvalidState("Translation mode is off".into()));
     }
 
+    // Unload Whisper to free VRAM before loading LLM
+    let unload_client = reqwest::Client::new();
+    let _ = unload_client
+        .post(format!("http://127.0.0.1:{}/runtime/unload", port))
+        .json(&serde_json::json!({"model_type": "whisper"}))
+        .send()
+        .await;
+    log::info!("Unloaded Whisper model to free VRAM for LLM");
+
     // Load glossary
     let glossary: Vec<GlossaryEntry> =
         match config_manager::load_glossary(&config.active_glossary) {

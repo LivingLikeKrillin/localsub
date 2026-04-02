@@ -188,6 +188,7 @@ def create_translate_job(
     two_pass: bool = False,
     model_category: str = "general",
     media_filename: str | None = None,
+    media_context: str | None = None,
 ) -> str:
     job_id = str(uuid.uuid4())
     _translate_jobs[job_id] = {
@@ -205,6 +206,7 @@ def create_translate_job(
         "two_pass": two_pass,
         "model_category": model_category,
         "media_filename": media_filename,
+        "media_context": media_context,
         "state": TranslateJobState.QUEUED,
         "cancel_flag": False,
     }
@@ -302,13 +304,6 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
         cleanup_job(job_id)
         return
 
-    yield {
-        "type": "translate_progress",
-        "job_id": job_id,
-        "progress": 0,
-        "message": "Starting translation...",
-    }
-
     segments = job["segments"]
     source_lang = job["source_lang"]
     target_lang = job["target_lang"]
@@ -320,11 +315,66 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     two_pass = job.get("two_pass", False)
     model_category = job.get("model_category", "general")
     media_filename = job.get("media_filename")
+    media_context = job.get("media_context")
     total = len(segments)
     all_results: list[dict[str, Any]] = []
     completed_translations: dict[int, str] = {}
     sampling = QUALITY_SAMPLING.get(quality, QUALITY_SAMPLING["balanced"])
     rolling_summary: str | None = None
+
+    # Auto-infer media context from first segments if not provided
+    if not media_context and total > 0:
+        yield {
+            "type": "translate_progress",
+            "job_id": job_id,
+            "progress": 0,
+            "message": "Analyzing content for context...",
+        }
+        try:
+            loop = asyncio.get_running_loop()
+            sample_count = min(100, total)
+            sample_lines = "\n".join(
+                seg.get("text", "") for seg in segments[:sample_count]
+            )
+            context_msgs = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a media analyst. Based on the subtitle lines below, "
+                        "write a brief context description (3-5 sentences) covering:\n"
+                        "- What type of content this is (movie, drama, documentary, etc.)\n"
+                        "- Genre and tone (comedy, thriller, romance, etc.)\n"
+                        "- Key character names mentioned and their apparent roles\n"
+                        "- General setting or situation\n"
+                        "Output ONLY the description. No labels or formatting.\n"
+                        "/no_think"
+                    ),
+                },
+                {"role": "user", "content": f"Subtitle lines:\n{sample_lines}"},
+            ]
+
+            def _infer_context(msgs=context_msgs):
+                return _model.create_chat_completion(
+                    messages=msgs, max_tokens=300,
+                    temperature=0.2, top_p=0.9,
+                )
+
+            ctx_resp = await loop.run_in_executor(None, _infer_context)
+            if ctx_resp and "choices" in ctx_resp:
+                raw = ctx_resp["choices"][0].get("message", {}).get("content") or ""
+                raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+                if raw:
+                    media_context = raw
+                    log.info("Auto-inferred media context: %s", media_context[:200])
+        except Exception as e:
+            log.warning("Failed to auto-infer media context: %s", e)
+
+    yield {
+        "type": "translate_progress",
+        "job_id": job_id,
+        "progress": 0,
+        "message": "Starting translation...",
+    }
 
     # Progress scaling for 2-pass
     pass1_weight = 0.7 if two_pass else 1.0
@@ -359,6 +409,7 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     model_category=model_category,
                     rolling_summary=rolling_summary,
                     media_filename=media_filename,
+                    media_context=media_context,
                 )
 
                 def _infer_single(msgs=messages, samp=sampling):

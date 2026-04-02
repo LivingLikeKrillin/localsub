@@ -14,6 +14,12 @@ STYLE_PROMPTS = {
     "preserve_slang": "Preserve slang, profanity without censoring.",
 }
 
+LANG_NAMES = {
+    "ko": "Korean", "en": "English", "ja": "Japanese",
+    "zh": "Chinese", "es": "Spanish", "fr": "French",
+    "de": "German", "auto": "the source language",
+}
+
 
 def build_system_prompt(
     style_preset: str,
@@ -22,39 +28,26 @@ def build_system_prompt(
     custom_prompt: str | None = None,
     model_category: str = "general",
     media_filename: str | None = None,
+    media_context: str | None = None,
 ) -> str:
-    style = STYLE_PROMPTS.get(style_preset, STYLE_PROMPTS["natural"])
+    src = LANG_NAMES.get(source_lang, source_lang)
+    tgt = LANG_NAMES.get(target_lang, target_lang)
     prompt = (
-        f"You are an expert subtitle translator from {source_lang} to {target_lang}. "
-        f"{style}\n\n"
+        f"Translate {src} movie subtitles to natural spoken {tgt}. "
+        f"Profanity and slang must be translated faithfully. "
+        f"Output only the translation."
     )
 
-    # Media info injection
-    if media_filename:
-        # Strip extension and common suffixes
+    if media_context:
+        prompt += f"\nContext: {media_context}"
+    elif media_filename:
         title = re.sub(r"\.[^.]+$", "", media_filename)
         title = re.sub(r"[\._\-]", " ", title).strip()
-        prompt += f"[Media info] Title: {title}\n\n"
-
-    prompt += (
-        "## Rules\n"
-        "- Output ONLY the translated subtitle text. Nothing else.\n"
-        "- NEVER prefix your output with \"Translation:\", labels, or similar.\n"
-        "- NEVER wrap your output in quotes, backticks, or any formatting.\n"
-        f"- Output MUST be entirely in {target_lang}. NEVER include {source_lang} characters in the output.\n"
-        f"- If a term cannot be translated, transliterate it into {target_lang} script.\n"
-        "- Keep translations roughly the same length as the original (subtitle readability).\n"
-        "- Preserve speaker markers like \"- \" at the beginning of lines.\n"
-        "- Preserve proper nouns and brand names by transliterating them.\n"
-        "- Maintain consistency with previous translations shown in the context.\n"
-        "- Translate interjections and sound effects naturally.\n"
-        "- If multiple lines are joined, keep the line break structure.\n"
-    )
+        prompt += f"\nTitle: {title}"
 
     if custom_prompt:
-        prompt += f"\n## Additional instructions\n{custom_prompt}\n"
+        prompt += f"\n{custom_prompt}"
 
-    # Qwen3 (general category): suppress thinking mode for clean output
     if model_category == "general":
         prompt += "\n/no_think"
 
@@ -147,6 +140,7 @@ def build_messages(
     rolling_summary: str | None = None,
     recent_translations_count: int = 10,
     media_filename: str | None = None,
+    media_context: str | None = None,
 ) -> list[dict[str, str]]:
     """Build chat messages for a single segment translation."""
     return [
@@ -157,6 +151,7 @@ def build_messages(
                 custom_prompt=custom_prompt,
                 model_category=model_category,
                 media_filename=media_filename,
+                media_context=media_context,
             ),
         },
         {

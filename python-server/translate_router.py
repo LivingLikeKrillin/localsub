@@ -29,6 +29,7 @@ class TranslateStartRequest(BaseModel):
     two_pass: bool = False
     model_category: str = "general"
     media_filename: str | None = None
+    media_context: str | None = None
 
 
 class TranslateStartResponse(BaseModel):
@@ -52,6 +53,7 @@ async def start_translate(request: TranslateStartRequest):
         two_pass=request.two_pass,
         model_category=request.model_category,
         media_filename=request.media_filename,
+        media_context=request.media_context,
     )
     return TranslateStartResponse(job_id=job_id)
 

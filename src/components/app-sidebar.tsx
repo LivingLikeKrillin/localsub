@@ -30,7 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
-import type { MainPage, HardwareInfo } from "@/types"
+import type { MainPage, HardwareInfo, ServerStatus } from "@/types"
 
 const NAV_ITEMS = [
   { page: "dashboard" as MainPage, icon: LayoutDashboard, i18nKey: "nav.dashboard" as const },
@@ -44,6 +44,7 @@ interface AppSidebarProps {
   onNavigate: (page: MainPage) => void
   processingCount?: number
   hardwareInfo?: HardwareInfo | null
+  serverStatus?: ServerStatus
 }
 
 export function AppSidebar({
@@ -51,6 +52,7 @@ export function AppSidebar({
   onNavigate,
   processingCount = 0,
   hardwareInfo,
+  serverStatus = "STOPPED",
 }: AppSidebarProps) {
   const { t } = useTranslation()
   const { setTheme, theme } = useTheme()
@@ -110,25 +112,34 @@ export function AppSidebar({
       <SidebarFooter className="p-2">
         <SidebarSeparator />
 
-        {/* System status chip */}
-        <div className="flex items-center gap-2 px-2 py-1.5">
-          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted">
-            <Cpu className="h-3 w-3 text-muted-foreground" />
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap transition-opacity duration-300 ease-in-out group-data-[collapsible=icon]:opacity-0">
+        {/* System status */}
+        <div className="flex flex-col gap-1 px-2 py-1.5 transition-opacity duration-300 ease-in-out group-data-[collapsible=icon]:opacity-0">
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
             {hardwareInfo?.gpu ? (
               <>
-                <span className="h-1.5 w-1.5 rounded-full bg-status-success" />
-                <span>{t("hw.cuda", { version: hardwareInfo.gpu.cuda_version ?? "N/A" })}</span>
-                <span className="text-muted-foreground/60">|</span>
-                <span>{(hardwareInfo.gpu.vram_mb / 1024).toFixed(0)}GB VRAM</span>
+                <span className="h-1.5 w-1.5 rounded-full bg-status-success shrink-0" />
+                <span>CUDA {hardwareInfo.gpu.cuda_version ?? "N/A"} · {(hardwareInfo.gpu.vram_mb / 1024).toFixed(0)}GB VRAM</span>
               </>
             ) : (
               <>
-                <span className="h-1.5 w-1.5 rounded-full bg-status-warning" />
+                <span className="h-1.5 w-1.5 rounded-full bg-status-warning shrink-0" />
                 <span>{t("hw.cpuOnly")}</span>
               </>
             )}
+          </div>
+          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
+              serverStatus === "RUNNING" ? "bg-status-success" :
+              serverStatus === "STARTING" ? "bg-status-warning animate-pulse" :
+              serverStatus === "ERROR" ? "bg-status-error" :
+              "bg-muted-foreground/40"
+            }`} />
+            <span>
+              {serverStatus === "RUNNING" ? t("server.running", "Server running") :
+               serverStatus === "STARTING" ? t("server.starting", "Starting...") :
+               serverStatus === "ERROR" ? t("server.error", "Server error") :
+               t("server.stopped", "Server stopped")}
+            </span>
           </div>
         </div>
 

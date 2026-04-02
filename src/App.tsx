@@ -383,6 +383,7 @@ function App() {
             activePage={activePage}
             onNavigate={setActivePage}
             hardwareInfo={hardware}
+            serverStatus={serverHook.status}
           />
           <SidebarInset>
             <PageHeader

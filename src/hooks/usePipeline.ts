@@ -298,6 +298,9 @@ export function usePipeline(
   }
 
   async function chainTranslation(pipeline: ActivePipeline) {
+    // Guard: prevent duplicate translation starts
+    if (pipeline.translateJobId) return;
+
     if (pipeline.segments.length === 0) {
       // No segments — skip translation
       pipeline.phase = "done";

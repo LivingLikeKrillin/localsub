@@ -30,6 +30,15 @@ pub async fn start_stt(
         (s.python_port, config)
     };
 
+    // Unload LLM to free VRAM before loading Whisper
+    let unload_client = reqwest::Client::new();
+    let _ = unload_client
+        .post(format!("http://127.0.0.1:{}/runtime/unload", port))
+        .json(&serde_json::json!({"model_type": "llm"}))
+        .send()
+        .await;
+    log::info!("Unloaded LLM model to free VRAM for Whisper");
+
     // Validate file exists
     if !Path::new(&file_path).exists() {
         return Err(AppError::InvalidState(format!(

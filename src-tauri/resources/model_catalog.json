@@ -47,6 +47,15 @@
       "profiles": ["power"]
     },
     {
+      "id": "kotoba-whisper-v2",
+      "name": "Kotoba-Whisper v2.0 (Japanese)",
+      "repo": "kotoba-tech/kotoba-whisper-v2.0-faster",
+      "files": ["model.bin", "config.json", "tokenizer.json", "vocabulary.json", "preprocessor_config.json"],
+      "total_size_bytes": 1516480096,
+      "sha256": {},
+      "profiles": ["balanced", "power"]
+    },
+    {
       "id": "qwen3-asr-1.7b",
       "name": "Qwen3-ASR 1.7B (SOTA)",
       "repo": "Qwen/Qwen3-ASR-1.7B",

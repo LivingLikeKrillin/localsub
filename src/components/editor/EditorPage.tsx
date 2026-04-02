@@ -791,7 +791,7 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat, vocabul
         )}
 
         {/* Waveform */}
-        <div className="h-[100px] border-b shrink-0">
+        <div className="h-[80px] border-b shrink-0">
           <Waveform
             lines={displayLines}
             currentTime={currentTime}
@@ -832,6 +832,7 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat, vocabul
               selectedId={selectedId}
               currentTime={currentTime}
               onSelect={setSelectedId}
+              onSeek={handleSeek}
               onSplit={handleSplitLine}
               onMergeWithNext={handleMergeWithNext}
               onDelete={liveMode ? undefined : handleDeleteLine}

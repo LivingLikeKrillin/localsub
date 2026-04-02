@@ -19,6 +19,7 @@ interface SubtitleListProps {
   selectedId: string | null
   currentTime: number
   onSelect: (id: string) => void
+  onSeek?: (time: number) => void
   onSplit: (id: string) => void
   onMergeWithNext: (id: string) => void
   onDelete?: (id: string) => void
@@ -133,10 +134,11 @@ const STATUS_VARIANT: Record<string, "default" | "secondary" | "destructive" | "
   editing: "secondary",
 }
 
-export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit, onMergeWithNext, onDelete, highlightMatches, currentMatchIndex, vocabularies, readOnly }: SubtitleListProps) {
+export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSeek, onSplit, onMergeWithNext, onDelete, highlightMatches, currentMatchIndex, vocabularies, readOnly }: SubtitleListProps) {
   const { t } = useTranslation()
   const selectedRef = useRef<HTMLDivElement>(null)
   const lastLineRef = useRef<HTMLDivElement>(null)
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Auto-scroll to last line in readOnly/live mode
   useEffect(() => {
@@ -164,11 +166,15 @@ export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit
     return { vocabTerms: terms, vocabRegex: regex }
   }, [vocabularies])
 
-  // Auto-scroll to selected
+  // Auto-scroll to selected (delayed to avoid interfering with double-click)
   useEffect(() => {
-    if (selectedRef.current) {
-      selectedRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
-    }
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
+    scrollTimerRef.current = setTimeout(() => {
+      if (selectedRef.current) {
+        selectedRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" })
+      }
+    }, 300)
+    return () => { if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current) }
   }, [selectedId])
 
   if (lines.length === 0) {
@@ -186,7 +192,7 @@ export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit
       <div className="flex flex-col gap-0.5 p-2">
         {lines.map((line, lineIndex) => {
           const isSelected = line.id === selectedId
-          const isActive = currentTime >= line.start_time && currentTime <= line.end_time
+          const isActive = !isSelected && currentTime >= line.start_time && currentTime <= line.end_time
           const duration = line.end_time - line.start_time
           const splitDisabled = readOnly || duration < 0.5
           const mergeDisabled = readOnly || lineIndex >= lines.length - 1
@@ -197,7 +203,7 @@ export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit
               <ContextMenuTrigger asChild>
                 <div
                   ref={isSelected ? selectedRef : isLast && readOnly ? lastLineRef : undefined}
-                  className={`flex gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors ${
+                  className={`flex gap-3 rounded-md px-3 py-2 cursor-pointer transition-colors select-none ${
                     isSelected
                       ? "bg-primary/10 ring-1 ring-primary/30"
                       : isActive
@@ -205,6 +211,7 @@ export function SubtitleList({ lines, selectedId, currentTime, onSelect, onSplit
                         : "hover:bg-muted/30"
                   }`}
                   onClick={() => onSelect(line.id)}
+                  onDoubleClick={() => onSeek?.(line.start_time + 0.01)}
                 >
                   {/* Index + time */}
                   <div className="flex flex-col items-end gap-0.5 w-16 shrink-0">

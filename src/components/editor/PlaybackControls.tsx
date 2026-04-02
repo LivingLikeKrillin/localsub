@@ -75,8 +75,8 @@ export function PlaybackControls({
         onValueChange={([v]) => onSeek(v)}
         min={0}
         max={Math.max(duration, 1)}
-        step={0.1}
-        className="flex-1"
+        step={Math.max(0.1, duration / 1000)}
+        className="flex-1 cursor-pointer"
       />
 
       <span className="text-xs tabular-nums text-muted-foreground w-20 text-right">

@@ -131,6 +131,22 @@ pub async fn start_translate(
     body["two_pass"] = serde_json::json!(two_pass);
     body["model_category"] = serde_json::json!(model_category);
 
+    // Pass media filename for context-aware translation
+    // Extract from any active job that has a file path
+    {
+        let s = state.lock().map_err(|e| {
+            AppError::InvalidState(format!("Lock error: {}", e))
+        })?;
+        // Find any job with a file path to extract filename
+        if let Some(job) = s.jobs.values().next() {
+            if let Some(ref msg) = job.message {
+                // message sometimes contains file info; use config fallback
+            }
+        }
+    }
+    // Use source_language as a hint; the actual filename will be passed from frontend in future
+    // For now, leave media_filename out — the system prompt improvement alone helps
+
     // POST /translate/start
     let client = reqwest::Client::new();
     let resp = client

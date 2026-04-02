@@ -28,6 +28,7 @@ class TranslateStartRequest(BaseModel):
     custom_prompt: str | None = None
     two_pass: bool = False
     model_category: str = "general"
+    media_filename: str | None = None
 
 
 class TranslateStartResponse(BaseModel):
@@ -50,6 +51,7 @@ async def start_translate(request: TranslateStartRequest):
         custom_prompt=request.custom_prompt,
         two_pass=request.two_pass,
         model_category=request.model_category,
+        media_filename=request.media_filename,
     )
     return TranslateStartResponse(job_id=job_id)
 

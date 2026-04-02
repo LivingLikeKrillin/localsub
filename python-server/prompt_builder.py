@@ -1,7 +1,7 @@
 """Prompt builder for LLM subtitle translation.
 
 Constructs system and user prompts with context window, glossary injection,
-translation memory, and style presets for segment-by-segment translation.
+translation memory, rolling summary, and style presets for segment-by-segment translation.
 """
 
 import re
@@ -21,20 +21,33 @@ def build_system_prompt(
     target_lang: str,
     custom_prompt: str | None = None,
     model_category: str = "general",
+    media_filename: str | None = None,
 ) -> str:
     style = STYLE_PROMPTS.get(style_preset, STYLE_PROMPTS["natural"])
     prompt = (
         f"You are an expert subtitle translator from {source_lang} to {target_lang}. "
         f"{style}\n\n"
+    )
+
+    # Media info injection
+    if media_filename:
+        # Strip extension and common suffixes
+        title = re.sub(r"\.[^.]+$", "", media_filename)
+        title = re.sub(r"[\._\-]", " ", title).strip()
+        prompt += f"[Media info] Title: {title}\n\n"
+
+    prompt += (
         "## Rules\n"
         "- Output ONLY the translated subtitle text. Nothing else.\n"
-        "- NEVER prefix your output with \"Translation:\", \"번역:\", \"Answer:\", or similar labels.\n"
-        "- NEVER wrap your output in quotes, backticks, or any other formatting.\n"
+        "- NEVER prefix your output with \"Translation:\", labels, or similar.\n"
+        "- NEVER wrap your output in quotes, backticks, or any formatting.\n"
+        f"- Output MUST be entirely in {target_lang}. NEVER include {source_lang} characters in the output.\n"
+        f"- If a term cannot be translated, transliterate it into {target_lang} script.\n"
         "- Keep translations roughly the same length as the original (subtitle readability).\n"
         "- Preserve speaker markers like \"- \" at the beginning of lines.\n"
-        "- Preserve proper nouns, brand names, and technical terms unless the glossary specifies otherwise.\n"
+        "- Preserve proper nouns and brand names by transliterating them.\n"
         "- Maintain consistency with previous translations shown in the context.\n"
-        "- Translate interjections and sound effects naturally (e.g. \"Huh?\" → natural equivalent).\n"
+        "- Translate interjections and sound effects naturally.\n"
         "- If multiple lines are joined, keep the line break structure.\n"
     )
 
@@ -66,8 +79,16 @@ def build_user_prompt(
     context_window: int,
     glossary: list[dict[str, str]],
     translations: dict[int, str] | None = None,
+    rolling_summary: str | None = None,
+    recent_translations_count: int = 10,
 ) -> str:
     parts: list[str] = []
+
+    # Rolling summary section
+    if rolling_summary:
+        parts.append("[Scene summary]")
+        parts.append(rolling_summary)
+        parts.append("")
 
     # Glossary section — only matching terms
     current_text = segments[current_index].get("text", "")
@@ -78,26 +99,36 @@ def build_user_prompt(
             parts.append(f"{g['source']} → {g['target']}")
         parts.append("")
 
-    # Context window
+    # Recent translations section — last N translations before current
+    if translations and recent_translations_count > 0:
+        recent_start = max(0, current_index - recent_translations_count)
+        recent_entries = []
+        for i in range(recent_start, current_index):
+            if i in translations:
+                text = segments[i].get("text", "")
+                recent_entries.append(f"- {text} → {translations[i]}")
+        if recent_entries:
+            parts.append("[Recent translations]")
+            parts.extend(recent_entries)
+            parts.append("")
+
+    # Context window (±N segments) — no timestamps to prevent LLM from copying them
     start = max(0, current_index - context_window)
     end = min(len(segments), current_index + context_window + 1)
 
     parts.append("[Context]")
     for i in range(start, end):
-        seg = segments[i]
-        ts = _format_timestamp(seg.get("start", 0))
-        text = seg.get("text", "")
+        text = segments[i].get("text", "")
         if i == current_index:
-            parts.append(f">>> [{ts}] {text}")
+            parts.append(f">>> {text}")
         elif translations and i in translations:
-            # Show previous translation for context (translation memory)
-            parts.append(f"[{ts}] {text} → {translations[i]}")
+            parts.append(f"- {text} → {translations[i]}")
         else:
-            parts.append(f"[{ts}] {text}")
+            parts.append(f"- {text}")
 
     parts.append("")
     parts.append("Translate ONLY the line marked with >>>.")
-    parts.append("Output ONLY the translated text, nothing else.")
+    parts.append("Output ONLY the translated text. Do NOT include timestamps, markers, or any formatting.")
 
     return "\n".join(parts)
 
@@ -107,12 +138,15 @@ def build_messages(
     current_index: int,
     source_lang: str,
     target_lang: str,
-    context_window: int = 2,
+    context_window: int = 4,
     style_preset: str = "natural",
     glossary: list[dict[str, str]] | None = None,
     translations: dict[int, str] | None = None,
     custom_prompt: str | None = None,
     model_category: str = "general",
+    rolling_summary: str | None = None,
+    recent_translations_count: int = 10,
+    media_filename: str | None = None,
 ) -> list[dict[str, str]]:
     """Build chat messages for a single segment translation."""
     return [
@@ -122,6 +156,7 @@ def build_messages(
                 style_preset, source_lang, target_lang,
                 custom_prompt=custom_prompt,
                 model_category=model_category,
+                media_filename=media_filename,
             ),
         },
         {
@@ -129,12 +164,14 @@ def build_messages(
             "content": build_user_prompt(
                 segments, current_index, context_window, glossary or [],
                 translations=translations,
+                rolling_summary=rolling_summary,
+                recent_translations_count=recent_translations_count,
             ),
         },
     ]
 
 
-# ── Batch translation ──────────────────────────────────────────────
+# ── Batch translation (kept for future "fast" quality tier) ───────
 
 def build_batch_messages(
     segments: list[dict[str, Any]],
@@ -207,11 +244,7 @@ def build_batch_messages(
 
 
 def parse_batch_output(raw: str, expected_count: int) -> list[str]:
-    """Parse numbered list output from batch translation.
-
-    Returns a list of translated strings. Falls back to line splitting
-    if pattern matching fails. Pads with empty strings if not enough results.
-    """
+    """Parse numbered list output from batch translation."""
     results: list[str] = []
     pattern = re.compile(r"^\d+[\.\)]\s*(.+)$")
     for line in raw.strip().splitlines():
@@ -222,17 +255,62 @@ def parse_batch_output(raw: str, expected_count: int) -> list[str]:
         if m:
             results.append(m.group(1).strip())
         elif not results:
-            # Haven't found any numbered lines yet, skip preamble
             continue
 
-    # Fallback: if we got nothing, split by lines
     if not results:
         results = [line.strip() for line in raw.strip().splitlines() if line.strip()]
 
-    # Pad or truncate to expected count
     while len(results) < expected_count:
         results.append("")
     return results[:expected_count]
+
+
+# ── Rolling summary ──────────────────────────────────────────────
+
+def build_summary_messages(
+    segments: list[dict[str, Any]],
+    translations: dict[int, str],
+    start_index: int,
+    end_index: int,
+    previous_summary: str | None,
+    source_lang: str,
+    target_lang: str,
+    model_category: str = "general",
+) -> list[dict[str, str]]:
+    """Build messages for generating a rolling scene summary."""
+    system = (
+        "You are a subtitle analyst. Summarize the subtitle segments below in 2-3 sentences.\n"
+        "Focus on: scene setting, character names, emotional tone, key events.\n"
+        "If a previous summary exists, update it with new information.\n"
+        "Keep total under 100 words. Output ONLY the summary.\n"
+    )
+    if model_category == "general":
+        system += "\n/no_think"
+
+    parts: list[str] = []
+    if previous_summary:
+        parts.append("[Previous summary]")
+        parts.append(previous_summary)
+        parts.append("")
+
+    parts.append(f"[New segments {start_index + 1}-{end_index + 1}]")
+    for i in range(start_index, min(end_index + 1, len(segments))):
+        seg = segments[i]
+        ts = _format_timestamp(seg.get("start", 0))
+        text = seg.get("text", "")
+        trans = translations.get(i, "")
+        if trans:
+            parts.append(f"[{ts}] {text} → {trans}")
+        else:
+            parts.append(f"[{ts}] {text}")
+
+    parts.append("")
+    parts.append("Write an updated summary incorporating the new segments.")
+
+    return [
+        {"role": "system", "content": system},
+        {"role": "user", "content": "\n".join(parts)},
+    ]
 
 
 # ── 2-Pass refinement ─────────────────────────────────────────────
@@ -244,16 +322,18 @@ def build_refine_messages(
     source_lang: str,
     target_lang: str,
     translations: dict[int, str],
-    context_window: int = 2,
+    context_window: int = 4,
     glossary: list[dict[str, str]] | None = None,
     custom_prompt: str | None = None,
     model_category: str = "general",
+    rolling_summary: str | None = None,
 ) -> list[dict[str, str]]:
     """Build messages for 2nd-pass refinement of a single segment."""
     system = (
         f"You are refining a subtitle translation from {source_lang} to {target_lang}. "
         "Improve for natural flow, consistency with surrounding translations, and correct terminology.\n"
         "- If the draft is already good, output it unchanged.\n"
+        f"- Output MUST be entirely in {target_lang}. NEVER include {source_lang} characters.\n"
         "- Output ONLY the refined translation. No labels, no quotes, no explanations.\n"
     )
     if custom_prompt:
@@ -262,6 +342,13 @@ def build_refine_messages(
         system += "\n/no_think"
 
     parts: list[str] = []
+
+    # Rolling summary
+    if rolling_summary:
+        parts.append("[Scene summary]")
+        parts.append(rolling_summary)
+        parts.append("")
+
     glossary = glossary or []
     current_text = segments[current_index].get("text", "")
     matched = _match_glossary(current_text, glossary)

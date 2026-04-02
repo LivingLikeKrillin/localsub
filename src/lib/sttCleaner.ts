@@ -5,9 +5,27 @@ import type { SttSegment } from "@/types";
  * Applied after STT completes, before translation.
  */
 export function cleanSttSegments(segments: SttSegment[]): SttSegment[] {
-  return segments
+  const deduped = deduplicateSegments(segments);
+  return deduped
     .map((seg) => ({ ...seg, text: cleanText(seg.text) }))
-    .filter((seg) => seg.text.length > 0);
+    .filter((seg) => seg.text.length > 0)
+    .map((seg, i) => ({ ...seg, index: i })); // re-index sequentially
+}
+
+/** Remove duplicate segments with same timing and text */
+function deduplicateSegments(segments: SttSegment[]): SttSegment[] {
+  if (segments.length === 0) return segments;
+  const sorted = [...segments].sort((a, b) => a.start - b.start || a.index - b.index);
+  const result: SttSegment[] = [sorted[0]];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = result[result.length - 1];
+    const curr = sorted[i];
+    const sameTime = Math.abs(prev.start - curr.start) < 0.05 && Math.abs(prev.end - curr.end) < 0.05;
+    const sameText = prev.text === curr.text;
+    if (sameTime && sameText) continue; // skip duplicate
+    result.push(curr);
+  }
+  return result;
 }
 
 /** Clean a single text string */

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react"
-import { Plus, Trash2, FileVideo, Clock, Filter, MoreHorizontal, RotateCcw, Search, ArrowUpDown, PenLine, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
+import { Plus, Trash2, FileVideo, Clock, Filter, MoreHorizontal, RotateCcw, Languages, Search, ArrowUpDown, PenLine, CheckCircle2, AlertCircle, Loader2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toastInfo, toastError } from "@/lib/toast"
 import { Button } from "@/components/ui/button"
@@ -407,7 +407,18 @@ export function DashboardPage({
                             <DropdownMenuSeparator />
                           </>
                         )}
-                        {job.status === "failed" && onRetryJob && (
+                        {job.status === "completed" && onRetryJob && (
+                          <>
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); onRetryJob(job.id) }}
+                            >
+                              <Languages className="mr-2 h-3.5 w-3.5" />
+                              {t("dashboard.actions.retryTranslation", "Retry translation")}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
+                        {(job.status === "failed" || job.status === "processing") && onRetryJob && (
                           <>
                             <DropdownMenuItem
                               onClick={(e) => { e.stopPropagation(); onRetryJob(job.id) }}

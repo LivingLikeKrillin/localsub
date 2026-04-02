@@ -180,9 +180,17 @@ export function usePipeline(
             pipeline.phase = "done";
             finalizePipeline(pipeline);
           } else if (job.state === "FAILED") {
-            // Translation failed — still save STT results
-            pipeline.phase = "done";
-            finalizePipeline(pipeline);
+            // Translation failed — save STT results but mark as failed
+            pipeline.phase = "error";
+            const lines = buildSubtitleLines(pipeline);
+            saveJobSubtitles(pipeline.dashboardJobId, lines).catch(() => {});
+            onJobUpdate(pipeline.dashboardJobId, {
+              status: "failed",
+              stage: "translating",
+              progress: 50,
+              error: job.message ?? "Translation failed",
+            });
+            pipelinesRef.current.delete(pipeline.dashboardJobId);
           } else if (job.state === "CANCELED") {
             pipeline.phase = "done";
             finalizePipeline(pipeline);
@@ -318,10 +326,18 @@ export function usePipeline(
     try {
       const job = await startTranslate(pipeline.segments);
       pipeline.translateJobId = job.id;
-    } catch {
-      // Translation start failed — save STT results anyway
-      pipeline.phase = "done";
-      finalizePipeline(pipeline);
+    } catch (e) {
+      // Translation start failed — save STT results but mark as failed
+      pipeline.phase = "error";
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      toastError(i18n.t("toast.pipelineFailed"), errorMsg);
+      onJobUpdate(pipeline.dashboardJobId, {
+        status: "failed",
+        stage: "translating",
+        progress: 50,
+        error: errorMsg,
+      });
+      pipelinesRef.current.delete(pipeline.dashboardJobId);
     }
   }
 

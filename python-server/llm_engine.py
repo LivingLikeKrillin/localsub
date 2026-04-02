@@ -68,7 +68,7 @@ def load_model(model_id: str, n_gpu_layers: int | None = None) -> bool:
             _model = Llama(
                 model_path=str(model_path),
                 n_gpu_layers=n_gpu_layers,
-                n_ctx=4096,
+                n_ctx=8192,
                 verbose=False,
             )
             _loaded_model_id = model_id
@@ -79,7 +79,7 @@ def load_model(model_id: str, n_gpu_layers: int | None = None) -> bool:
     _model = Llama(
         model_path=str(model_path),
         n_gpu_layers=0,
-        n_ctx=4096,
+        n_ctx=8192,
         verbose=False,
     )
     _loaded_model_id = model_id
@@ -99,11 +99,28 @@ def is_model_loaded() -> bool:
 # ── Output postprocessing ──────────────────────────────────────────
 
 def _postprocess(raw: str) -> str:
-    """Clean LLM output: strip prefixes, quotes, backticks, think blocks."""
+    """Clean LLM output: strip prefixes, quotes, backticks, think blocks, prompt leakage."""
     text = raw.strip()
 
     # Strip <think>...</think> blocks (Qwen3 thinking mode leakage)
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+
+    # Strip prompt leakage: timestamp markers like [00:12:34] or >>> markers
+    text = re.sub(r"^>>>?\s*", "", text)
+    text = re.sub(r"\[?\d{2}:\d{2}:\d{2}\]?\s*", "", text)
+
+    # If output contains multiple lines with timestamps, keep only the first clean line
+    lines = text.split("\n")
+    clean_lines = []
+    for line in lines:
+        line = line.strip()
+        # Remove lines that are just timestamps or prompt artifacts
+        line = re.sub(r"^>>>?\s*", "", line)
+        line = re.sub(r"^\[?\d{2}:\d{2}:\d{2}\]?\s*", "", line)
+        if line:
+            clean_lines.append(line)
+    # For single-segment translation, take only the first meaningful line
+    text = clean_lines[0] if clean_lines else ""
 
     # Strip common prefixes
     for prefix in [
@@ -137,7 +154,7 @@ QUALITY_SAMPLING: dict[str, dict[str, float]] = {
     "best": {"temperature": 0.3, "top_p": 0.95, "repeat_penalty": 1.15},
 }
 
-BATCH_SIZE = 4
+BATCH_SIZE = 1
 
 
 # ── Job management ─────────────────────────────────────────────────
@@ -153,11 +170,15 @@ class TranslateJobState(str, Enum):
 _translate_jobs: dict[str, dict[str, Any]] = {}
 
 
+SUMMARY_INTERVAL = 25  # Generate rolling summary every N segments
+SUMMARY_REFRESH = 200  # Regenerate summary from scratch every N segments
+
+
 def create_translate_job(
     segments: list[dict[str, Any]],
     source_lang: str,
     target_lang: str,
-    context_window: int = 2,
+    context_window: int = 4,
     style_preset: str = "natural",
     glossary: list[dict[str, str]] | None = None,
     model_id: str | None = None,
@@ -166,6 +187,7 @@ def create_translate_job(
     custom_prompt: str | None = None,
     two_pass: bool = False,
     model_category: str = "general",
+    media_filename: str | None = None,
 ) -> str:
     job_id = str(uuid.uuid4())
     _translate_jobs[job_id] = {
@@ -182,6 +204,7 @@ def create_translate_job(
         "custom_prompt": custom_prompt,
         "two_pass": two_pass,
         "model_category": model_category,
+        "media_filename": media_filename,
         "state": TranslateJobState.QUEUED,
         "cancel_flag": False,
     }
@@ -296,10 +319,12 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     custom_prompt = job.get("custom_prompt")
     two_pass = job.get("two_pass", False)
     model_category = job.get("model_category", "general")
+    media_filename = job.get("media_filename")
     total = len(segments)
     all_results: list[dict[str, Any]] = []
     completed_translations: dict[int, str] = {}
     sampling = QUALITY_SAMPLING.get(quality, QUALITY_SAMPLING["balanced"])
+    rolling_summary: str | None = None
 
     # Progress scaling for 2-pass
     pass1_weight = 0.7 if two_pass else 1.0
@@ -332,6 +357,8 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     translations=completed_translations,
                     custom_prompt=custom_prompt,
                     model_category=model_category,
+                    rolling_summary=rolling_summary,
+                    media_filename=media_filename,
                 )
 
                 def _infer_single(msgs=messages, samp=sampling):
@@ -371,6 +398,38 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     "message": f"Translating... ({i + 1}/{total} segments)",
                 }
                 i += 1
+
+                # Rolling summary generation
+                if i > 0 and i % SUMMARY_INTERVAL == 0:
+                    try:
+                        # Refresh from scratch periodically to prevent drift
+                        prev_summary = None if (i % SUMMARY_REFRESH == 0) else rolling_summary
+                        summary_start = max(0, i - SUMMARY_INTERVAL)
+                        summary_msgs = prompt_builder.build_summary_messages(
+                            segments, completed_translations,
+                            summary_start, i - 1,
+                            prev_summary, source_lang, target_lang,
+                            model_category=model_category,
+                        )
+
+                        def _infer_summary(msgs=summary_msgs):
+                            return _model.create_chat_completion(
+                                messages=msgs,
+                                max_tokens=256,
+                                temperature=0.2,
+                                top_p=0.9,
+                                repeat_penalty=1.0,
+                            )
+
+                        summary_resp = await loop.run_in_executor(None, _infer_summary)
+                        if summary_resp and "choices" in summary_resp:
+                            raw = summary_resp["choices"][0].get("message", {}).get("content") or ""
+                            raw = re.sub(r"<think>.*?</think>", "", raw, flags=re.DOTALL).strip()
+                            if raw:
+                                rolling_summary = raw
+                                log.info("Rolling summary updated at segment %d: %s", i, rolling_summary[:100])
+                    except Exception as e:
+                        log.warning("Summary generation failed at segment %d: %s", i, e)
             else:
                 # Batch translation
                 messages = prompt_builder.build_batch_messages(

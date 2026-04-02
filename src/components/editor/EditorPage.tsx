@@ -202,6 +202,8 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat, vocabul
   }, [filePath, isVideo])
 
   // Peaks extraction after audio is ready
+  // Skip for large files (>200MB) to avoid WebView2 OOM crash
+  const MAX_PEAK_EXTRACT_BYTES = 200 * 1024 * 1024
   useEffect(() => {
     if (!mediaReady || !filePath) return
 
@@ -210,6 +212,15 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat, vocabul
 
     async function extractPeaks() {
       try {
+        // Check file size first via HEAD request to avoid loading huge files into memory
+        const headResp = await fetch(assetUrl, { method: "HEAD" })
+        const contentLength = Number(headResp.headers.get("content-length") ?? "0")
+        if (contentLength > MAX_PEAK_EXTRACT_BYTES) {
+          console.info(`Skipping peak extraction: file too large (${(contentLength / 1e6).toFixed(0)} MB)`)
+          if (!cancelled) setPeaks([])
+          return
+        }
+
         const response = await fetch(assetUrl)
         const arrayBuffer = await response.arrayBuffer()
         const audioCtx = new AudioContext()

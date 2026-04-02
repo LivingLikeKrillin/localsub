@@ -177,7 +177,15 @@ function App() {
     if (screen === "MAIN" && !jobsLoaded) {
       loadDashboardJobs()
         .then((saved) => {
-          if (saved.length > 0) setDashboardJobs(saved);
+          if (saved.length > 0) {
+            // Recover stuck jobs: processing → failed (no active pipeline after restart)
+            const recovered = saved.map((j) =>
+              j.status === "processing"
+                ? { ...j, status: "failed" as const, error: "Interrupted by app restart" }
+                : j,
+            );
+            setDashboardJobs(recovered);
+          }
           setJobsLoaded(true);
         })
         .catch((e) => {

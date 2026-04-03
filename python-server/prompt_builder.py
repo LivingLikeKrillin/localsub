@@ -105,9 +105,9 @@ def build_user_prompt(
             parts.extend(recent_entries)
             parts.append("")
 
-    # Context window (±N segments) — no timestamps to prevent LLM from copying them
+    # Context window (previous N segments only — no future segments to prevent LLM from translating them)
     start = max(0, current_index - context_window)
-    end = min(len(segments), current_index + context_window + 1)
+    end = current_index + 1  # only up to current segment, no future
 
     parts.append("[Context]")
     for i in range(start, end):

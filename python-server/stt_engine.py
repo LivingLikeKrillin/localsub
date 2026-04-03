@@ -291,11 +291,12 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
             vad_filter=True,
             vad_parameters=dict(
                 max_speech_duration_s=15,
-                min_silence_duration_ms=300,
-                speech_pad_ms=200,
+                min_silence_duration_ms=200,
+                speech_pad_ms=300,
+                threshold=0.3,
             ),
             condition_on_previous_text=False,
-            no_speech_threshold=0.6,
+            no_speech_threshold=0.3,
         ),
     )
 

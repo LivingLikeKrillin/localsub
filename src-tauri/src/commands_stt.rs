@@ -30,6 +30,24 @@ pub async fn start_stt(
         (s.python_port, config)
     };
 
+    // Wait for server to be healthy before proceeding
+    let health_client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .unwrap_or_else(|_| reqwest::Client::new());
+    for attempt in 0..30 {
+        match health_client.get(format!("http://127.0.0.1:{}/health", port)).send().await {
+            Ok(resp) if resp.status().is_success() => break,
+            _ => {
+                if attempt == 29 {
+                    return Err(AppError::PythonServer("Server not available after 30 attempts".into()));
+                }
+                log::info!("Waiting for server... (attempt {})", attempt + 1);
+                tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+            }
+        }
+    }
+
     // Unload LLM to free VRAM before loading Whisper
     let unload_client = reqwest::Client::new();
     let _ = unload_client

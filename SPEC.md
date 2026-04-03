@@ -21,7 +21,7 @@ Phase 1은 **Local First** 전략으로 오프라인 동작을 보장하고, 외
 | 항목 | 값 |
 |------|----|
 | 제품명 | LocalSub |
-| 식별자 | `com.localsub.app` |
+| 식별자 | `LocalSub` |
 | 버전 | 0.1.0 (Phase 1) |
 | 프론트엔드 | React 18 + TypeScript + Vite |
 | 백엔드 | FastAPI + Uvicorn + sse-starlette |
@@ -86,7 +86,7 @@ Phase 1은 **Local First** 전략으로 오프라인 동작을 보장하고, 외
 
 | ID | 요구사항 | 설명 |
 |----|----------|------|
-| W-01.1 | 첫 실행 감지 | `%APPDATA%/com.localsub.app/config.json` 부재 시 위자드 시작 |
+| W-01.1 | 첫 실행 감지 | `%APPDATA%/LocalSub/config.json` 부재 시 위자드 시작 |
 | W-01.2 | 위자드 상태 유지 | 각 단계 완료 여부를 config.json에 기록, 중단 후 재개 가능 |
 | W-01.3 | 스킵 옵션 | 이전 사용자: 위자드 전체 스킵 버튼 (기본값으로 설정) |
 
@@ -155,7 +155,7 @@ Phase 1은 **Local First** 전략으로 오프라인 동작을 보장하고, 외
 
 | ID | 요구사항 | 설명 |
 |----|----------|------|
-| M-02.1 | 저장 경로 | 기본: `%APPDATA%/com.localsub.app/models/` |
+| M-02.1 | 저장 경로 | 기본: `%APPDATA%/LocalSub/models/` |
 | M-02.2 | 커스텀 경로 | 위자드에서 변경 가능, config.json에 저장 |
 | M-02.3 | manifest.json | 설치된 모델 목록 + 상태 + 경로를 `models/manifest.json`에 기록 |
 | M-02.4 | 무결성 검증 | 앱 시작 시 manifest의 모델 파일 존재 + 해시 검증 |
@@ -496,7 +496,7 @@ Phase 1은 **Local First** 전략으로 오프라인 동작을 보장하고, 외
 ### 6.1 디렉토리 레이아웃
 
 ```
-%APPDATA%/com.localsub.app/
+%APPDATA%/LocalSub/
 ├── config.json                    # 앱 설정 (위자드 완료 상태, 언어, 포맷 등)
 ├── setup-complete.marker          # pip 셋업 해시 (기존)
 ├── python-env/                    # pip 패키지 (기존)

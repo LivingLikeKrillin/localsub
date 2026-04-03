@@ -72,4 +72,4 @@ Whisper 모델은 `model.bin` + `config.json` + `tokenizer.json` + `vocabulary.*
 - 프리셋의 모델/언어 설정이 번역에 아직 반영되지 않음 (전역 config 사용) — TODO
 - `llama-cpp-python`은 소스 빌드 필요 (CUDA + MSVC). v0.3.18 사용 중
   - Windows 한국어 환경에서 jinja/utils.h 유니코드 빌드 에러 → `-DLLAMA_BUILD_TOOLS=OFF` 불가, 소스 패치 필요
-- 앱 식별자: `com.localsub.app`, 데이터: `%APPDATA%/com.localsub.app/`
+- 앱 식별자: `LocalSub`, 데이터: `%APPDATA%/LocalSub/`

@@ -11,7 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 # ── Logging setup ─────────────────────────────────────────────────
 # Enable debug logging: set LOCALSUB_DEBUG=1 environment variable
 _debug_mode = os.environ.get("LOCALSUB_DEBUG", "0") == "1"
-_log_dir = Path(os.environ.get("APPDATA", ".")) / "com.localsub.app" / "logs"
+_log_dir = Path(os.environ.get("APPDATA", ".")) / "LocalSub" / "logs"
 _log_dir.mkdir(parents=True, exist_ok=True)
 
 _log_level = logging.DEBUG if _debug_mode else logging.INFO

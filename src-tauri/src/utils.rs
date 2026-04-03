@@ -5,7 +5,7 @@ use serde::Serialize;
 
 use crate::error::AppError;
 
-pub const APP_ID: &str = "com.localsub.app";
+pub const APP_ID: &str = "LocalSub";
 
 pub fn app_data_dir() -> Result<PathBuf, AppError> {
     let base = dirs::config_dir()
@@ -38,7 +38,7 @@ mod tests {
 
     #[test]
     fn test_app_id_value() {
-        assert_eq!(APP_ID, "com.localsub.app");
+        assert_eq!(APP_ID, "LocalSub");
     }
 
     #[test]

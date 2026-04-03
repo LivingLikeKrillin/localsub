@@ -40,7 +40,7 @@ pub fn run() {
     // Set up logging to both stderr and file
     let log_dir = dirs::config_dir()
         .unwrap_or_else(|| std::path::PathBuf::from("."))
-        .join("com.localsub.app")
+        .join("LocalSub")
         .join("logs");
     let _ = std::fs::create_dir_all(&log_dir);
     let log_file_path = log_dir.join("tauri.log");

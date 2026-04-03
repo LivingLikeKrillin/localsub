@@ -98,16 +98,16 @@ def build_user_prompt(
         recent_entries = []
         for i in range(recent_start, current_index):
             if i in translations:
-                text = segments[i].get("text", "")
-                recent_entries.append(f"- {text} → {translations[i]}")
+                recent_entries.append(translations[i])
         if recent_entries:
             parts.append("[Recent translations]")
-            parts.extend(recent_entries)
+            for entry in recent_entries:
+                parts.append(entry)
             parts.append("")
 
-    # Context window (previous N segments only — no future segments to prevent LLM from translating them)
+    # Context window (previous N segments only)
     start = max(0, current_index - context_window)
-    end = current_index + 1  # only up to current segment, no future
+    end = current_index + 1
 
     parts.append("[Context]")
     for i in range(start, end):
@@ -115,9 +115,9 @@ def build_user_prompt(
         if i == current_index:
             parts.append(f">>> {text}")
         elif translations and i in translations:
-            parts.append(f"- {text} → {translations[i]}")
+            parts.append(f"{text} = {translations[i]}")
         else:
-            parts.append(f"- {text}")
+            parts.append(text)
 
     parts.append("")
     parts.append("Translate ONLY the line marked with >>>.")
@@ -348,7 +348,7 @@ def build_refine_messages(
     for i in range(start, current_index):
         trans = translations.get(i, "")
         if trans:
-            parts.append(f"- {trans}")
+            parts.append(trans)
 
     parts.append(f">>> {draft}")
     parts.append("")

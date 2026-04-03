@@ -143,6 +143,9 @@ def _postprocess(raw: str) -> str:
     if text.startswith("```") and text.endswith("```"):
         text = text[3:-3].strip()
 
+    # Strip leading dashes (prompt format leakage)
+    text = re.sub(r"^-{1,2}\s*", "", text).strip()
+
     return text
 
 

@@ -150,6 +150,52 @@ def _postprocess(raw: str) -> str:
     return text
 
 
+# Common short Japanese expressions that LLMs often fail to translate
+_JA_FALLBACK_MAP = {
+    "おい": "야",
+    "ねえ": "있잖아",
+    "うん": "응",
+    "ええ": "네",
+    "はい": "네",
+    "いいえ": "아니요",
+    "なに": "뭐",
+    "何": "뭐",
+    "えっ": "엥",
+    "えー": "에이",
+    "うそ": "거짓말",
+    "まじ": "진짜",
+    "やだ": "싫어",
+    "くそ": "젠장",
+    "クソ": "젠장",
+    "ちくしょう": "젠장",
+    "畜生": "젠장",
+    "バカ": "바보",
+    "馬鹿": "바보",
+    "すげー": "대박",
+    "やばい": "큰일이다",
+    "サイコー": "최고",
+}
+
+
+def _fix_untranslated(original: str, translated: str) -> str:
+    """If the translation is identical to the original (untranslated), try fallback map."""
+    stripped_orig = original.strip()
+    stripped_trans = translated.strip()
+
+    # Check if translation is just the original Japanese text
+    if stripped_trans == stripped_orig or not stripped_trans:
+        # Try exact match in fallback map
+        if stripped_orig in _JA_FALLBACK_MAP:
+            return _JA_FALLBACK_MAP[stripped_orig]
+
+        # Try case-insensitive / partial match
+        for ja, ko in _JA_FALLBACK_MAP.items():
+            if stripped_orig.lower() == ja.lower():
+                return ko
+
+    return translated
+
+
 # ── Quality tier sampling parameters ───────────────────────────────
 
 QUALITY_SAMPLING: dict[str, dict[str, float]] = {
@@ -442,6 +488,7 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                 if response and "choices" in response and len(response["choices"]) > 0:
                     raw_content = response["choices"][0].get("message", {}).get("content") or ""
                     translated = _postprocess(raw_content)
+                    translated = _fix_untranslated(segments[i].get("text", ""), translated)
 
                 log.debug(
                     "[TRANSLATE] seg=%d | orig=%s | raw=%s | post=%s",

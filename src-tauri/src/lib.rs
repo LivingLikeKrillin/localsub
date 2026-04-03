@@ -37,9 +37,41 @@ use state::{AppState, SharedState};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
-        .format_timestamp_millis()
-        .init();
+    // Set up logging to both stderr and file
+    let log_dir = dirs::config_dir()
+        .unwrap_or_else(|| std::path::PathBuf::from("."))
+        .join("com.localsub.app")
+        .join("logs");
+    let _ = std::fs::create_dir_all(&log_dir);
+    let log_file_path = log_dir.join("tauri.log");
+
+    let mut builder =
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"));
+    builder.format_timestamp_millis();
+
+    // Add file writer
+    if let Ok(file) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_file_path)
+    {
+        let file = std::sync::Mutex::new(file);
+        builder.format(move |buf, record| {
+            use std::io::Write;
+            let ts = buf.timestamp_millis();
+            let msg = format!("{} [{}] {}: {}\n", ts, record.target(), record.level(), record.args());
+            // Write to stderr (default)
+            write!(buf, "{}", msg)?;
+            // Write to file
+            if let Ok(mut f) = file.lock() {
+                let _ = f.write_all(msg.as_bytes());
+            }
+            Ok(())
+        });
+    }
+
+    builder.init();
+    log::info!("Tauri starting (log_file={})", log_file_path.display());
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())

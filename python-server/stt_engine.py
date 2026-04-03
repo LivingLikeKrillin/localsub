@@ -276,9 +276,14 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
 
 async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any], None]:
     """Run transcription with faster-whisper engine."""
+    import time as _time
+    _stt_start = _time.time()
+
     file_path = job["file_path"]
     language = job.get("language")
     lang_arg = language if language and language != "auto" else None
+
+    log.info("[STT] Starting whisper transcription: file=%s, lang=%s", file_path, lang_arg)
 
     loop = asyncio.get_running_loop()
     segments_iter, info = await loop.run_in_executor(
@@ -345,6 +350,17 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
         index += 1
         await asyncio.sleep(0)
 
+    # Log STT statistics
+    _stt_elapsed = _time.time() - _stt_start
+    _durations = [s["end"] - s["start"] for s in all_segments]
+    log.info(
+        "[STT] Complete: %d segments in %.1fs, avg_dur=%.1fs, max_dur=%.1fs, audio=%.0fs",
+        len(all_segments), _stt_elapsed,
+        sum(_durations) / len(_durations) if _durations else 0,
+        max(_durations) if _durations else 0,
+        duration,
+    )
+
     # Unload model immediately after STT to free VRAM/RAM
     yield {
         "type": "stt_progress",
@@ -353,7 +369,7 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
         "message": "Unloading STT model...",
     }
     unload_model()
-    log.info("Whisper model unloaded after STT completion")
+    log.info("[STT] Whisper model unloaded")
 
     job["state"] = SttJobState.DONE
     yield {

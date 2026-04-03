@@ -88,6 +88,7 @@ def load_model(model_id: str, n_gpu_layers: int | None = None) -> bool:
 
 def unload_model() -> None:
     global _model, _loaded_model_id
+    log.info("[LLM] Unloading model: %s", _loaded_model_id)
     _model = None
     _loaded_model_id = None
 
@@ -379,6 +380,13 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
         "message": "Starting translation...",
     }
 
+    import time as _time
+    _translate_start = _time.time()
+    log.info(
+        "[TRANSLATE] Starting: %d segments, model=%s, quality=%s, two_pass=%s, context=%s",
+        total, _loaded_model_id, quality, two_pass, media_context[:80] if media_context else "none",
+    )
+
     # Progress scaling for 2-pass
     pass1_weight = 0.7 if two_pass else 1.0
 
@@ -426,9 +434,22 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
 
                 response = await loop.run_in_executor(None, _infer_single)
                 translated = ""
+                raw_content = ""
                 if response and "choices" in response and len(response["choices"]) > 0:
-                    content = response["choices"][0].get("message", {}).get("content") or ""
-                    translated = _postprocess(content)
+                    raw_content = response["choices"][0].get("message", {}).get("content") or ""
+                    translated = _postprocess(raw_content)
+
+                log.debug(
+                    "[TRANSLATE] seg=%d | orig=%s | raw=%s | post=%s",
+                    i,
+                    segments[i].get("text", "")[:50],
+                    raw_content[:80],
+                    translated[:80],
+                )
+
+                # Detect repeated translation (same as previous)
+                if i > 0 and translated and translated == completed_translations.get(i - 1):
+                    log.warning("[TRANSLATE] seg=%d repeated previous translation: %s", i, translated[:50])
 
                 completed_translations[i] = translated
                 result_entry = {
@@ -612,6 +633,16 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                 await asyncio.sleep(0)
 
         # Done
+        _translate_elapsed = _time.time() - _translate_start
+        _repeated = sum(1 for j in range(1, len(all_results))
+                        if all_results[j]["translated"] == all_results[j-1]["translated"]
+                        and all_results[j]["translated"])
+        log.info(
+            "[TRANSLATE] Complete: %d segments in %.1fs (%.1f seg/s), repeated=%d",
+            len(all_results), _translate_elapsed,
+            len(all_results) / _translate_elapsed if _translate_elapsed > 0 else 0,
+            _repeated,
+        )
         job["state"] = TranslateJobState.DONE
         yield {
             "type": "done",

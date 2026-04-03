@@ -71,7 +71,10 @@ pub fn build_python_env(app: &AppHandle) -> Vec<(String, String)> {
     let models_dir = get_models_dir().to_string_lossy().to_string();
 
     if cfg!(debug_assertions) {
-        return vec![("MODEL_DIR".to_string(), models_dir)];
+        return vec![
+            ("MODEL_DIR".to_string(), models_dir),
+            ("LOCALSUB_DEBUG".to_string(), "1".to_string()),
+        ];
     }
 
     let env_dir = get_python_env_dir();

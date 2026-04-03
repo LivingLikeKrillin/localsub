@@ -330,6 +330,7 @@ def build_refine_messages(
         f"Refine this {src}-to-{tgt} subtitle translation. "
         f"Fix: 1) unnatural/stilted expressions → natural spoken {tgt}, "
         f"2) inconsistent names/terms with surrounding subtitles. "
+        f"Keep all profanity, slang, and vulgar expressions as-is. Do NOT censor or soften them. "
         f"If already natural, output unchanged. Output only the refined text."
     )
     if model_category == "general":

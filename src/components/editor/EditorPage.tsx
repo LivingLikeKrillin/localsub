@@ -14,7 +14,8 @@ import { FindReplaceBar } from "./FindReplaceBar"
 import { WaveformMinimap } from "./WaveformMinimap"
 import { VideoPreview } from "./VideoPreview"
 import { ShortcutsDialog } from "./ShortcutsDialog"
-import { loadJobSubtitles, saveJobSubtitles, exportSubtitles } from "@/lib/tauriApi"
+import { loadJobSubtitles, saveJobSubtitles, exportSubtitles, startTranslate } from "@/lib/tauriApi"
+import { listen } from "@tauri-apps/api/event"
 import { splitLine, mergeLines, reindex, getSplitTime, canSplit, canMerge } from "@/lib/subtitleOps"
 import { useHistory } from "@/hooks/useHistory"
 import type { SubtitleLine, Vocabulary } from "@/types"
@@ -438,6 +439,34 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat, vocabul
     setDirty(true)
   }, [lines, pushLines, selectedId])
 
+  const [retranslating, setRetranslating] = useState(false)
+  const handleRetranslate = useCallback(async (id: string) => {
+    const line = lines.find((l) => l.id === id)
+    if (!line) return
+    setRetranslating(true)
+    try {
+      const seg = { index: line.index, start: line.start_time, end: line.end_time, text: line.original_text }
+      const job = await startTranslate([seg])
+      // Listen for the translate-segment event
+      const unlisten = await listen<{ index: number; translated: string }>("translate-segment", (event) => {
+        if (event.payload.index === 0) {
+          const updated = lines.map((l) =>
+            l.id === id ? { ...l, translated_text: event.payload.translated } : l,
+          )
+          pushLines(updated)
+          setDirty(true)
+          setRetranslating(false)
+          unlisten()
+        }
+      })
+      // Timeout fallback
+      setTimeout(() => { setRetranslating(false); unlisten() }, 30000)
+    } catch (e) {
+      toastError(String(e))
+      setRetranslating(false)
+    }
+  }, [lines, pushLines])
+
   const handleTogglePlay = useCallback(() => {
     if (mediaReady && mediaRef.current) {
       if (isPlaying) {
@@ -850,8 +879,10 @@ export function EditorPage({ jobId, filePath, outputDir, subtitleFormat, vocabul
               onSplit={handleSplitLine}
               onMergeWithNext={handleMergeWithNext}
               onDelete={handleDeleteLine}
+              onRetranslate={handleRetranslate}
               canSplitLine={canSplitLine}
               canMergeLine={canMergeLine}
+              retranslating={retranslating}
               vocabularies={vocabularies}
               onUpdateVocabulary={onUpdateVocabulary}
             />

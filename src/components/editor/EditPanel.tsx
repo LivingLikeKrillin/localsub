@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react"
 import { useTranslation } from "react-i18next"
-import { Clock, Type, ArrowRight, Scissors, Merge, Trash2, BookPlus } from "lucide-react"
+import { Clock, Type, ArrowRight, Scissors, Merge, Trash2, BookPlus, RefreshCw } from "lucide-react"
 import { toastSuccess } from "@/lib/toast"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -19,8 +19,10 @@ interface EditPanelProps {
   onSplit: (id: string) => void
   onMergeWithNext: (id: string) => void
   onDelete?: (id: string) => void
+  onRetranslate?: (id: string) => void
   canSplitLine: boolean
   canMergeLine: boolean
+  retranslating?: boolean
   vocabularies?: Vocabulary[]
   onUpdateVocabulary?: (v: Vocabulary) => Promise<Vocabulary[]>
 }
@@ -83,7 +85,7 @@ function TimestampInput({
   )
 }
 
-export function EditPanel({ line, onUpdateLine, onSplit, onMergeWithNext, onDelete, canSplitLine, canMergeLine, vocabularies, onUpdateVocabulary }: EditPanelProps) {
+export function EditPanel({ line, onUpdateLine, onSplit, onMergeWithNext, onDelete, onRetranslate, canSplitLine, canMergeLine, retranslating, vocabularies, onUpdateVocabulary }: EditPanelProps) {
   const { t } = useTranslation()
   const [vocabOpen, setVocabOpen] = useState(false)
   const [vocabSource, setVocabSource] = useState("")
@@ -162,6 +164,24 @@ export function EditPanel({ line, onUpdateLine, onSplit, onMergeWithNext, onDele
               <p>{t("editor.actions.mergeNextTooltip")} <kbd className="ml-1 text-[10px] opacity-60">Ctrl+Shift+M</kbd></p>
             </TooltipContent>
           </Tooltip>
+          {onRetranslate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={retranslating}
+                  onClick={() => onRetranslate(line.id)}
+                >
+                  <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${retranslating ? "animate-spin" : ""}`} />
+                  {t("editor.actions.retranslate", "Retranslate")}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t("editor.actions.retranslateTooltip", "Retranslate this line")}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
           {onDelete && (
             <Tooltip>
               <TooltipTrigger asChild>

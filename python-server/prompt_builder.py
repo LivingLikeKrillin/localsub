@@ -324,55 +324,34 @@ def build_refine_messages(
     rolling_summary: str | None = None,
 ) -> list[dict[str, str]]:
     """Build messages for 2nd-pass refinement of a single segment."""
+    src = LANG_NAMES.get(source_lang, source_lang)
+    tgt = LANG_NAMES.get(target_lang, target_lang)
     system = (
-        f"You are refining a subtitle translation from {source_lang} to {target_lang}. "
-        "Improve for natural flow, consistency with surrounding translations, and correct terminology.\n"
-        "- If the draft is already good, output it unchanged.\n"
-        f"- Output MUST be entirely in {target_lang}. NEVER include {source_lang} characters.\n"
-        "- Output ONLY the refined translation. No labels, no quotes, no explanations.\n"
+        f"Refine this {src}-to-{tgt} subtitle translation. "
+        f"Fix: 1) unnatural/stilted expressions → natural spoken {tgt}, "
+        f"2) inconsistent names/terms with surrounding subtitles. "
+        f"If already natural, output unchanged. Output only the refined text."
     )
-    if custom_prompt:
-        system += f"\n## Additional instructions\n{custom_prompt}\n"
     if model_category == "general":
         system += "\n/no_think"
 
     parts: list[str] = []
 
-    # Rolling summary
+    # Scene context for tone/mood awareness
     if rolling_summary:
-        parts.append("[Scene summary]")
-        parts.append(rolling_summary)
+        parts.append(f"[Scene] {rolling_summary}")
         parts.append("")
 
-    glossary = glossary or []
-    current_text = segments[current_index].get("text", "")
-    matched = _match_glossary(current_text, glossary)
-    if matched:
-        parts.append("[Glossary]")
-        for g in matched:
-            parts.append(f"{g['source']} → {g['target']}")
-        parts.append("")
-
-    # Surrounding context with translations
+    # Previous translations for consistency
     start = max(0, current_index - context_window)
-    end = min(len(segments), current_index + context_window + 1)
-    parts.append("[Context with translations]")
-    for i in range(start, end):
-        seg = segments[i]
-        ts = _format_timestamp(seg.get("start", 0))
-        text = seg.get("text", "")
+    for i in range(start, current_index):
         trans = translations.get(i, "")
-        if i == current_index:
-            parts.append(f">>> [{ts}] {text}")
-            parts.append(f"    Draft: {draft}")
-        elif trans:
-            parts.append(f"[{ts}] {text} → {trans}")
-        else:
-            parts.append(f"[{ts}] {text}")
+        if trans:
+            parts.append(f"- {trans}")
 
+    parts.append(f">>> {draft}")
     parts.append("")
-    parts.append("Refine ONLY the draft for the line marked with >>>.")
-    parts.append("Output ONLY the refined translation, nothing else.")
+    parts.append("Refine the line marked with >>>.")
 
     return [
         {"role": "system", "content": system},

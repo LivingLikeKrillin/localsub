@@ -14,7 +14,8 @@
       {
         "title": "LocalSub",
         "width": 1200,
-        "height": 860
+        "height": 860,
+        "center": true
       }
     ],
     "security": {

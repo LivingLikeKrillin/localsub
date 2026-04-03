@@ -92,13 +92,15 @@ def build_user_prompt(
             parts.append(f"{g['source']} → {g['target']}")
         parts.append("")
 
-    # Recent translations section — last N translations before current
+    # Recent translations section — last N unique translations before current
     if translations and recent_translations_count > 0:
         recent_start = max(0, current_index - recent_translations_count)
         recent_entries = []
+        seen = set()
         for i in range(recent_start, current_index):
-            if i in translations:
+            if i in translations and translations[i] not in seen:
                 recent_entries.append(translations[i])
+                seen.add(translations[i])
         if recent_entries:
             parts.append("[Recent translations]")
             for entry in recent_entries:

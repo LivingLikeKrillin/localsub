@@ -95,7 +95,9 @@
       "split": "Split",
       "mergeNext": "Merge with next",
       "splitTooltip": "Split subtitle at playhead position",
-      "mergeNextTooltip": "Merge with the subtitle below"
+      "mergeNextTooltip": "Merge with the subtitle below",
+      "retranslate": "Retranslate",
+      "retranslateTooltip": "Retranslate this line"
     },
     "stats": {
       "chars": "Characters",

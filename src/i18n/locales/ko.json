@@ -95,7 +95,9 @@
       "split": "분할",
       "mergeNext": "다음과 병합",
       "splitTooltip": "재생 위치에서 자막 분할",
-      "mergeNextTooltip": "아래 자막과 병합"
+      "mergeNextTooltip": "아래 자막과 병합",
+      "retranslate": "재번역",
+      "retranslateTooltip": "이 줄을 다시 번역합니다"
     },
     "stats": {
       "chars": "글자 수",

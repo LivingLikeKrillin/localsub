@@ -319,7 +319,7 @@ export function usePipeline(
     onJobUpdate(pipeline.dashboardJobId, {
       status: "processing",
       stage: "translating",
-      progress: 50,
+      progress: 0,
     });
 
     try {
@@ -333,7 +333,7 @@ export function usePipeline(
       onJobUpdate(pipeline.dashboardJobId, {
         status: "failed",
         stage: "translating",
-        progress: 50,
+        progress: 0,
         error: errorMsg,
       });
       pipelinesRef.current.delete(pipeline.dashboardJobId);

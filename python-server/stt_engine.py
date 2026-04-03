@@ -345,6 +345,16 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
         index += 1
         await asyncio.sleep(0)
 
+    # Unload model immediately after STT to free VRAM/RAM
+    yield {
+        "type": "stt_progress",
+        "job_id": job_id,
+        "progress": 99,
+        "message": "Unloading STT model...",
+    }
+    unload_model()
+    log.info("Whisper model unloaded after STT completion")
+
     job["state"] = SttJobState.DONE
     yield {
         "type": "done",

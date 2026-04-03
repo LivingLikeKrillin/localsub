@@ -423,6 +423,10 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     media_context=media_context,
                 )
 
+                # Log full prompt for debugging
+                log.debug("[TRANSLATE] seg=%d prompt_system=%s", i, messages[0]["content"][:100])
+                log.debug("[TRANSLATE] seg=%d prompt_user=%s", i, messages[1]["content"][:300])
+
                 def _infer_single(msgs=messages, samp=sampling):
                     return _model.create_chat_completion(
                         messages=msgs,

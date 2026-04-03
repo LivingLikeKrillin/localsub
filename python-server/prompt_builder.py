@@ -75,57 +75,16 @@ def build_user_prompt(
     rolling_summary: str | None = None,
     recent_translations_count: int = 10,
 ) -> str:
-    parts: list[str] = []
-
-    # Rolling summary section
-    if rolling_summary:
-        parts.append("[Scene summary]")
-        parts.append(rolling_summary)
-        parts.append("")
-
-    # Glossary section — only matching terms
+    # Direct translation — no context (9B models perform better without it)
     current_text = segments[current_index].get("text", "")
-    matched = _match_glossary(current_text, glossary)
+
+    # Only include glossary if matched (minimal addition)
+    matched = _match_glossary(current_text, glossary or [])
     if matched:
-        parts.append("[Glossary]")
-        for g in matched:
-            parts.append(f"{g['source']} → {g['target']}")
-        parts.append("")
+        glossary_hint = " (" + ", ".join(f"{g['source']}={g['target']}" for g in matched) + ")"
+        return current_text + glossary_hint
 
-    # Recent translations section — last N unique translations before current
-    if translations and recent_translations_count > 0:
-        recent_start = max(0, current_index - recent_translations_count)
-        recent_entries = []
-        seen = set()
-        for i in range(recent_start, current_index):
-            if i in translations and translations[i] not in seen:
-                recent_entries.append(translations[i])
-                seen.add(translations[i])
-        if recent_entries:
-            parts.append("[Recent translations]")
-            for entry in recent_entries:
-                parts.append(entry)
-            parts.append("")
-
-    # Context window (previous N segments only)
-    start = max(0, current_index - context_window)
-    end = current_index + 1
-
-    parts.append("[Context]")
-    for i in range(start, end):
-        text = segments[i].get("text", "")
-        if i == current_index:
-            parts.append(f">>> {text}")
-        elif translations and i in translations:
-            parts.append(f"{text} = {translations[i]}")
-        else:
-            parts.append(text)
-
-    parts.append("")
-    parts.append("Translate ONLY the line marked with >>>.")
-    parts.append("Output ONLY the translated text. Do NOT include timestamps, markers, or any formatting.")
-
-    return "\n".join(parts)
+    return current_text
 
 
 def build_messages(

@@ -361,17 +361,8 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
         duration,
     )
 
-    # Unload model immediately after STT to free VRAM/RAM
-    yield {
-        "type": "stt_progress",
-        "job_id": job_id,
-        "progress": 99,
-        "message": "Unloading STT model...",
-    }
-    unload_model()
-    log.info("[STT] Whisper model unloaded")
-
     job["state"] = SttJobState.DONE
+    log.info("[STT] Transcription complete, model kept loaded (Rust will unload before LLM)")
     yield {
         "type": "done",
         "job_id": job_id,

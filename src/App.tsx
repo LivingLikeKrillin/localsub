@@ -251,7 +251,14 @@ function App() {
 
   const handleRemoveJob = useCallback((id: string) => {
     queueRef.current = queueRef.current.filter((e) => e.jobId !== id);
-    setDashboardJobs((prev) => prev.filter((j) => j.id !== id));
+    setDashboardJobs((prev) => {
+      const job = prev.find((j) => j.id === id);
+      if (job && job.status === "processing") {
+        activeCountRef.current = Math.max(0, activeCountRef.current - 1);
+        setTimeout(() => drainQueueRef.current(), 0);
+      }
+      return prev.filter((j) => j.id !== id);
+    });
   }, []);
 
   const handleRetryJob = useCallback(

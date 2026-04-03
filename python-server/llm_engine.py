@@ -154,8 +154,8 @@ def _postprocess(raw: str) -> str:
 
 QUALITY_SAMPLING: dict[str, dict[str, float]] = {
     "fast": {"temperature": 0.1, "top_p": 0.8, "repeat_penalty": 1.0},
-    "balanced": {"temperature": 0.3, "top_p": 0.9, "repeat_penalty": 1.1},
-    "best": {"temperature": 0.3, "top_p": 0.95, "repeat_penalty": 1.15},
+    "balanced": {"temperature": 0.5, "top_p": 0.9, "repeat_penalty": 1.2},
+    "best": {"temperature": 0.5, "top_p": 0.95, "repeat_penalty": 1.2},
 }
 
 BATCH_SIZE = 1

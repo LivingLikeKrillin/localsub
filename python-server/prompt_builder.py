@@ -38,13 +38,6 @@ def build_system_prompt(
         f"Output only the translation."
     )
 
-    if media_context:
-        prompt += f"\nContext: {media_context}"
-    elif media_filename:
-        title = re.sub(r"\.[^.]+$", "", media_filename)
-        title = re.sub(r"[\._\-]", " ", title).strip()
-        prompt += f"\nTitle: {title}"
-
     if custom_prompt:
         prompt += f"\n{custom_prompt}"
 

@@ -31,6 +31,7 @@ Thumbs.db
 # Environment
 .env
 *.log
+logs/
 
 # Test files & results
 test_results/

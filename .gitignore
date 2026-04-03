@@ -31,3 +31,20 @@ Thumbs.db
 # Environment
 .env
 *.log
+
+# Test files & results
+test_results/
+test_*.py
+eval_*.py
+check_*.py
+compare_*.py
+create_test_audio.py
+extract_stt.py
+
+# Dev build scripts
+run-dev.bat
+build-llama*.bat
+.cargo/
+
+# Test audio
+*.wav

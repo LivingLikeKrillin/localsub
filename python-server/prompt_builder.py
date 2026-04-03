@@ -299,21 +299,14 @@ def build_refine_messages(
 
     parts: list[str] = []
 
-    # Scene context for tone/mood awareness
+    # Scene context for tone/mood awareness (only rolling summary, no previous translations)
     if rolling_summary:
         parts.append(f"[Scene] {rolling_summary}")
         parts.append("")
 
-    # Previous translations for consistency
-    start = max(0, current_index - context_window)
-    for i in range(start, current_index):
-        trans = translations.get(i, "")
-        if trans:
-            parts.append(trans)
-
     parts.append(f">>> {draft}")
     parts.append("")
-    parts.append("Refine the line marked with >>>.")
+    parts.append("Refine the line above.")
 
     return [
         {"role": "system", "content": system},

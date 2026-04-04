@@ -24,11 +24,23 @@ export function useServerStatus() {
       }
     });
 
-    // Listen for server crash — update status only (restart handled by pipeline)
+    // Listen for server crash — auto-restart if not in pipeline (model switching)
     const unlistenCrash = listen("server-crashed", () => {
       setStatus("ERROR");
       setError("Server crashed");
       toastError(i18n.t("toast.serverCrashed"));
+      // Auto-restart after 2 seconds, but only if server is still in ERROR state
+      // (pipeline's restartServer would have already set it to STARTING/RUNNING)
+      setTimeout(async () => {
+        try {
+          const currentStatus = await getServerStatus();
+          if (currentStatus === "ERROR" || currentStatus === "STOPPED") {
+            await startServer();
+          }
+        } catch (e) {
+          console.error("Auto-restart failed:", e);
+        }
+      }, 3000);
     });
 
     return () => {

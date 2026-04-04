@@ -393,6 +393,7 @@ function App() {
             onNavigate={setActivePage}
             hardwareInfo={hardware}
             serverStatus={serverHook.status}
+            onRestartServer={serverHook.start}
           />
           <SidebarInset>
             <PageHeader

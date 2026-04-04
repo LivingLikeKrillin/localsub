@@ -45,6 +45,7 @@ interface AppSidebarProps {
   processingCount?: number
   hardwareInfo?: HardwareInfo | null
   serverStatus?: ServerStatus
+  onRestartServer?: () => void
 }
 
 export function AppSidebar({
@@ -53,6 +54,7 @@ export function AppSidebar({
   processingCount = 0,
   hardwareInfo,
   serverStatus = "STOPPED",
+  onRestartServer,
 }: AppSidebarProps) {
   const { t } = useTranslation()
   const { setTheme, theme } = useTheme()
@@ -127,17 +129,28 @@ export function AppSidebar({
               </>
             )}
           </div>
-          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <div
+            className={`flex items-center gap-1.5 text-[11px] text-muted-foreground ${
+              (serverStatus === "ERROR" || serverStatus === "STOPPED") && onRestartServer
+                ? "cursor-pointer hover:text-foreground transition-colors"
+                : ""
+            }`}
+            onClick={() => {
+              if ((serverStatus === "ERROR" || serverStatus === "STOPPED") && onRestartServer) {
+                onRestartServer();
+              }
+            }}
+          >
             <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
               serverStatus === "RUNNING" ? "bg-status-success" :
               serverStatus === "STARTING" ? "bg-status-warning animate-pulse" :
-              serverStatus === "ERROR" ? "bg-status-error" :
+              serverStatus === "ERROR" ? "bg-status-error animate-pulse" :
               "bg-muted-foreground/40"
             }`} />
             <span>
               {serverStatus === "RUNNING" ? t("server.running", "Server running") :
                serverStatus === "STARTING" ? t("server.starting", "Starting...") :
-               serverStatus === "ERROR" ? t("server.error", "Server error") :
+               serverStatus === "ERROR" ? t("server.errorClick", "Server error — click to restart") :
                t("server.stopped", "Server stopped")}
             </span>
           </div>

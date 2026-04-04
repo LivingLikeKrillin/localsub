@@ -52,6 +52,7 @@ interface ActivePipeline {
   speakerMap: Map<number, string>;
   enableDiarization: boolean;
   skipTranslation: boolean;
+  presetId?: string;
   filePath: string;
   phase: "stt" | "diarizing" | "translating" | "done" | "error";
 }
@@ -323,7 +324,7 @@ export function usePipeline(
     });
 
     try {
-      const job = await startTranslate(pipeline.segments);
+      const job = await startTranslate(pipeline.segments, pipeline.presetId);
       pipeline.translateJobId = job.id;
     } catch (e) {
       // Translation start failed — save STT results but mark as failed
@@ -361,7 +362,7 @@ export function usePipeline(
   }
 
   const processJob = useCallback(
-    async (dashboardJobId: string, filePath: string, sourceLanguage?: string, enableDiarization?: boolean, skipTranslation?: boolean) => {
+    async (dashboardJobId: string, filePath: string, sourceLanguage?: string, enableDiarization?: boolean, skipTranslation?: boolean, presetId?: string) => {
       const pipeline: ActivePipeline = {
         dashboardJobId,
         sttJobId: null,
@@ -372,6 +373,7 @@ export function usePipeline(
         speakerMap: new Map(),
         enableDiarization: enableDiarization ?? false,
         skipTranslation: skipTranslation ?? false,
+        presetId,
         filePath,
         phase: "stt",
       };
@@ -403,7 +405,7 @@ export function usePipeline(
   );
 
   const retryTranslation = useCallback(
-    async (dashboardJobId: string, segments: SttSegment[]) => {
+    async (dashboardJobId: string, segments: SttSegment[], presetId?: string) => {
       const pipeline: ActivePipeline = {
         dashboardJobId,
         sttJobId: null,
@@ -414,6 +416,7 @@ export function usePipeline(
         speakerMap: new Map(),
         enableDiarization: false,
         skipTranslation: false,
+        presetId,
         filePath: "",
         phase: "translating",
       };

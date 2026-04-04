@@ -53,6 +53,7 @@ interface QueueEntry {
   sourceLanguage?: string;
   enableDiarization: boolean;
   skipTranslation: boolean;
+  presetId?: string;
 }
 
 function App() {
@@ -150,7 +151,7 @@ function App() {
     while (queueRef.current.length > 0 && activeCountRef.current < maxConcurrent) {
       const entry = queueRef.current.shift()!;
       activeCountRef.current++;
-      processJob(entry.jobId, entry.filePath, entry.sourceLanguage, entry.enableDiarization, entry.skipTranslation);
+      processJob(entry.jobId, entry.filePath, entry.sourceLanguage, entry.enableDiarization, entry.skipTranslation, entry.presetId);
     }
   }, [processJob, config?.max_concurrent_jobs]);
   drainQueueRef.current = drainQueue;
@@ -242,6 +243,7 @@ function App() {
           sourceLanguage: sourceLanguage === "auto" ? undefined : sourceLanguage,
           enableDiarization,
           skipTranslation,
+          presetId,
         });
       }
       drainQueue();

@@ -74,6 +74,8 @@ mod tests {
             custom_translation_prompt: None,
             two_pass_translation: None,
             enable_diarization: None,
+            media_type: None,
+            few_shot_set_id: None,
             created_at: "2026-01-01T00:00:00Z".to_string(),
             updated_at: "2026-01-01T00:00:00Z".to_string(),
         }

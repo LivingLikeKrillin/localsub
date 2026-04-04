@@ -11,6 +11,7 @@ import {
   MoreHorizontal,
   Star,
   FileUp,
+  Info,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
@@ -61,6 +62,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { pickFile, readCsvFile } from "@/lib/tauriApi"
 import type { Preset, Vocabulary, VocabularyEntry, ModelManifestEntry } from "@/types"
@@ -250,6 +252,7 @@ function PresetDialog({
   const [translationQuality, setTranslationQuality] = useState(initial?.translation_quality ?? "balanced")
   const [customPrompt, setCustomPrompt] = useState(initial?.custom_translation_prompt ?? "")
   const [twoPass, setTwoPass] = useState(initial?.two_pass_translation ?? false)
+  const [mediaType, setMediaType] = useState(initial?.media_type ?? "movie")
 
   function handleSave() {
     if (!name.trim()) return
@@ -266,20 +269,21 @@ function PresetDialog({
       translation_quality: translationQuality,
       custom_translation_prompt: customPrompt || undefined,
       two_pass_translation: twoPass,
+      media_type: mediaType || "movie",
     })
     onOpenChange(false)
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{initial ? t("presets.dialog.editPreset") : t("presets.dialog.newPreset")}</DialogTitle>
           <DialogDescription>{t("presets.dialog.presetDescription")}</DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh]">
-          <div className="flex flex-col gap-4 py-2 px-1">
+          <div className="flex flex-col gap-4 py-2 px-4">
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="preset-name">{t("presets.dialog.name")}</Label>
               <Input id="preset-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -405,17 +409,47 @@ function PresetDialog({
             </div>
 
             <div className="flex items-center justify-between gap-4">
-              <Label>{t("presets.twoPass", "2-Pass Refinement")}</Label>
+              <div className="flex items-center gap-1.5">
+                <Label>{t("presets.twoPass", "2-Pass Refinement")}</Label>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px]">
+                      <p>1차 번역 후 자연스러운 표현으로 다듬는 2단계 번역. 품질은 올라가지만 시간이 2배 걸립니다.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Switch checked={twoPass} onCheckedChange={setTwoPass} />
             </div>
 
             <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <Label>Media Type</Label>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px]">
+                      <p>영상 유형에 따라 번역 톤이 달라집니다. 자유롭게 입력 가능합니다.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
+              <Input value={mediaType} onChange={(e) => setMediaType(e.target.value)} placeholder="movie, anime, drama..." />
+            </div>
+
+            <div className="flex flex-col gap-1.5">
               <Label>{t("presets.customPrompt", "Custom Instructions")}</Label>
+              <p className="text-[11px] text-muted-foreground -mt-0.5">LLM이 이해할 수 있도록 영문으로 작성하세요.</p>
               <Textarea
                 value={customPrompt}
                 onChange={(e) => setCustomPrompt(e.target.value)}
                 rows={2}
-                placeholder={t("presets.customPromptPlaceholder")}
+                placeholder="e.g., Use casual tone, preserve honorifics, keep character names in katakana..."
                 className="resize-none"
               />
             </div>
@@ -756,6 +790,7 @@ export function PresetsPage({
             )}
           </div>
         </TabsContent>
+
       </Tabs>
 
       <PresetDialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen} initial={editingPreset} vocabularies={vocabularies} manifest={manifest} onSave={handleSavePreset} />

@@ -15,6 +15,7 @@ import type {
   RuntimeStatus,
   Preset,
   Vocabulary,
+  FewShotSet,
   SubtitleLine,
   DashboardJob,
 } from "../types";
@@ -153,8 +154,9 @@ export async function cancelDiarization(jobId: string): Promise<void> {
 
 export async function startTranslate(
   segments: SttSegment[],
+  presetId?: string,
 ): Promise<Job> {
-  return invoke<Job>("start_translate", { segments });
+  return invoke<Job>("start_translate", { segments, presetId });
 }
 
 export async function cancelTranslate(jobId: string): Promise<void> {
@@ -248,6 +250,24 @@ export async function updatePreset(preset: Preset): Promise<Preset[]> {
 
 export async function removePreset(id: string): Promise<Preset[]> {
   return invoke("remove_preset", { id });
+}
+
+// ── Few-shot commands ──
+
+export async function getFewShotSets(): Promise<FewShotSet[]> {
+  return invoke("get_fewshot_sets");
+}
+
+export async function addFewShotSet(set: FewShotSet): Promise<FewShotSet[]> {
+  return invoke("add_fewshot_set", { set });
+}
+
+export async function updateFewShotSet(set: FewShotSet): Promise<FewShotSet[]> {
+  return invoke("update_fewshot_set", { set });
+}
+
+export async function removeFewShotSet(id: string): Promise<FewShotSet[]> {
+  return invoke("remove_fewshot_set", { id });
 }
 
 // ── Vocabulary commands ──

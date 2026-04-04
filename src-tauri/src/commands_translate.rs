@@ -6,6 +6,7 @@ use crate::contracts::SubtitleSegment;
 use crate::error::AppError;
 use crate::job::Job;
 use crate::manifest_manager;
+use crate::preset_manager;
 use crate::sse_client;
 use crate::state::{GlossaryEntry, ServerStatus, SharedState};
 
@@ -14,6 +15,7 @@ pub async fn start_translate(
     app: AppHandle,
     state: State<'_, SharedState>,
     segments: Vec<SubtitleSegment>,
+    preset_id: Option<String>,
 ) -> Result<Job, AppError> {
     let (port, config) = {
         let s = state.lock().map_err(|e| {
@@ -28,6 +30,13 @@ pub async fn start_translate(
             .unwrap_or_else(|| config_manager::load_config().unwrap_or_default());
         (s.python_port, config)
     };
+
+    // Load preset if specified — override config with preset values
+    let preset = preset_id.as_deref().and_then(|pid| {
+        preset_manager::load_presets()
+            .ok()
+            .and_then(|presets| presets.into_iter().find(|p| p.id == pid))
+    });
 
     // Check translation mode
     if config.translation_mode == "off" {
@@ -157,6 +166,14 @@ pub async fn start_translate(
         .unwrap_or_else(|| config.translation_quality.as_deref() == Some("best"));
     body["two_pass"] = serde_json::json!(two_pass);
     body["model_category"] = serde_json::json!(model_category);
+
+    // Pass media_type from preset
+    if let Some(ref p) = preset {
+        if let Some(ref mt) = p.media_type {
+            body["media_type"] = serde_json::json!(mt);
+        }
+    }
+
 
     // Pass media filename for context-aware translation
     // Extract from any active job that has a file path

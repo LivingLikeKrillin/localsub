@@ -29,11 +29,13 @@ def build_system_prompt(
     model_category: str = "general",
     media_filename: str | None = None,
     media_context: str | None = None,
+    media_type: str | None = None,
 ) -> str:
     src = LANG_NAMES.get(source_lang, source_lang)
     tgt = LANG_NAMES.get(target_lang, target_lang)
+    mt = media_type or "movie"
     prompt = (
-        f"Translate {src} movie subtitles to natural spoken {tgt}. "
+        f"Translate {src} {mt} subtitles to natural spoken {tgt}. "
         f"Profanity and slang must be translated faithfully. "
         f"Output only the translation."
     )
@@ -69,15 +71,7 @@ def build_user_prompt(
     recent_translations_count: int = 10,
 ) -> str:
     # Direct translation — no context (9B models perform better without it)
-    current_text = segments[current_index].get("text", "")
-
-    # Only include glossary if matched (minimal addition)
-    matched = _match_glossary(current_text, glossary or [])
-    if matched:
-        glossary_hint = " (" + ", ".join(f"{g['source']}={g['target']}" for g in matched) + ")"
-        return current_text + glossary_hint
-
-    return current_text
+    return segments[current_index].get("text", "")
 
 
 def build_messages(
@@ -95,9 +89,11 @@ def build_messages(
     recent_translations_count: int = 10,
     media_filename: str | None = None,
     media_context: str | None = None,
+    media_type: str | None = None,
+    few_shot_examples: list[dict[str, str]] | None = None,
 ) -> list[dict[str, str]]:
     """Build chat messages for a single segment translation."""
-    return [
+    msgs: list[dict[str, str]] = [
         {
             "role": "system",
             "content": build_system_prompt(
@@ -106,18 +102,38 @@ def build_messages(
                 model_category=model_category,
                 media_filename=media_filename,
                 media_context=media_context,
-            ),
-        },
-        {
-            "role": "user",
-            "content": build_user_prompt(
-                segments, current_index, context_window, glossary or [],
-                translations=translations,
-                rolling_summary=rolling_summary,
-                recent_translations_count=recent_translations_count,
+                media_type=media_type,
             ),
         },
     ]
+
+    # Inject glossary entries as few-shot chat turns
+    for entry in (glossary or []):
+        src_text = entry.get("source", "")
+        tgt_text = entry.get("target", "")
+        if src_text and tgt_text:
+            msgs.append({"role": "user", "content": src_text})
+            msgs.append({"role": "assistant", "content": tgt_text})
+
+    # Inject additional few-shot examples as chat turns
+    for ex in (few_shot_examples or []):
+        src_text = ex.get("source", "")
+        tgt_text = ex.get("target", "")
+        if src_text and tgt_text:
+            msgs.append({"role": "user", "content": src_text})
+            msgs.append({"role": "assistant", "content": tgt_text})
+
+    msgs.append({
+        "role": "user",
+        "content": build_user_prompt(
+            segments, current_index, context_window, glossary or [],
+            translations=translations,
+            rolling_summary=rolling_summary,
+            recent_translations_count=recent_translations_count,
+        ),
+    })
+
+    return msgs
 
 
 # ── Batch translation (kept for future "fast" quality tier) ───────

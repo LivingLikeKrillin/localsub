@@ -30,6 +30,8 @@ class TranslateStartRequest(BaseModel):
     model_category: str = "general"
     media_filename: str | None = None
     media_context: str | None = None
+    media_type: str | None = None
+    few_shot_examples: list[dict] = []
 
 
 class TranslateStartResponse(BaseModel):
@@ -54,6 +56,8 @@ async def start_translate(request: TranslateStartRequest):
         model_category=request.model_category,
         media_filename=request.media_filename,
         media_context=request.media_context,
+        media_type=request.media_type,
+        few_shot_examples=request.few_shot_examples,
     )
     return TranslateStartResponse(job_id=job_id)
 

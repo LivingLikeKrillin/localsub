@@ -15,6 +15,8 @@ class SttStartRequest(BaseModel):
     file_path: str
     language: str | None = None
     model_id: str | None = None
+    start_time: float | None = None
+    end_time: float | None = None
 
 
 class SttStartResponse(BaseModel):
@@ -29,6 +31,8 @@ async def start_stt(request: SttStartRequest):
         file_path=request.file_path,
         language=request.language,
         model_id=request.model_id,
+        start_time=request.start_time,
+        end_time=request.end_time,
     )
     return SttStartResponse(job_id=job_id)
 

@@ -122,8 +122,10 @@ export async function verifyModel(modelId: string): Promise<string> {
 export async function startStt(
   filePath: string,
   language?: string,
+  startTime?: number,
+  endTime?: number,
 ): Promise<Job> {
-  return invoke<Job>("start_stt", { filePath, language });
+  return invoke<Job>("start_stt", { filePath, language, startTime, endTime });
 }
 
 export async function cancelStt(jobId: string): Promise<void> {

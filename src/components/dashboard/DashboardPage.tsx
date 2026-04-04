@@ -49,6 +49,9 @@ interface DashboardPageProps {
   onRemoveJob: (id: string) => void
   onRetryJob?: (jobId: string) => void
   onOpenEditor?: (jobId: string, filePath: string) => void
+  onUpdateVocabulary?: (vocab: Vocabulary) => Promise<unknown>
+  onAddVocabulary?: (vocab: Vocabulary) => Promise<unknown>
+  onUpdatePreset?: (preset: Preset) => Promise<unknown>
 }
 
 type FilterStatus = "all" | JobStatus
@@ -103,6 +106,9 @@ export function DashboardPage({
   onRemoveJob,
   onRetryJob,
   onOpenEditor,
+  onUpdateVocabulary,
+  onAddVocabulary,
+  onUpdatePreset,
 }: DashboardPageProps) {
   const { t, i18n } = useTranslation()
   const [newJobOpen, setNewJobOpen] = useState(false)
@@ -471,6 +477,9 @@ export function DashboardPage({
         presets={presets}
         vocabularies={vocabularies}
         onSubmit={onNewJob}
+        onUpdateVocabulary={onUpdateVocabulary}
+        onAddVocabulary={onAddVocabulary}
+        onUpdatePreset={onUpdatePreset}
         initialFiles={droppedFiles}
       />
     </div>

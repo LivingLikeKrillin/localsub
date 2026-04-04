@@ -408,6 +408,9 @@ function App() {
                   onNewJob={handleNewJob}
                   onRemoveJob={handleRemoveJob}
                   onRetryJob={handleRetryJob}
+                  onUpdateVocabulary={vocabulariesHook.update}
+                  onAddVocabulary={vocabulariesHook.add}
+                  onUpdatePreset={presetsHook.update}
                   onOpenEditor={(jobId, filePath) => {
                     setEditorJobId(jobId);
                     setEditorFilePath(filePath);

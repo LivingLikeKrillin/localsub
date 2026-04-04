@@ -185,12 +185,7 @@ function VocabCard({ vocab, onEdit, onDelete }: { vocab: Vocabulary; onEdit: () 
           </div>
           {vocab.description && <p className="text-xs text-muted-foreground mt-1 ml-6">{vocab.description}</p>}
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-xs text-muted-foreground">
-            {t(`presets.lang.${vocab.source_lang}`, vocab.source_lang)} &rarr; {t(`presets.lang.${vocab.target_lang}`, vocab.target_lang)}
-          </span>
-          <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${expanded ? "rotate-90" : ""}`} />
-        </div>
+        <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform shrink-0 ${expanded ? "rotate-90" : ""}`} />
       </button>
 
       {expanded && (
@@ -198,10 +193,8 @@ function VocabCard({ vocab, onEdit, onDelete }: { vocab: Vocabulary; onEdit: () 
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">{t("presets.dialog.source")}</TableHead>
-                <TableHead className="w-[200px]">{t("presets.dialog.target")}</TableHead>
-                <TableHead>{t("presets.dialog.context")}</TableHead>
-                <TableHead>{t("presets.dialog.note")}</TableHead>
+                <TableHead className="w-[50%]">{t("presets.dialog.source")}</TableHead>
+                <TableHead className="w-[50%]">{t("presets.dialog.target")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -209,8 +202,6 @@ function VocabCard({ vocab, onEdit, onDelete }: { vocab: Vocabulary; onEdit: () 
                 <TableRow key={entry.id}>
                   <TableCell className="font-medium text-sm">{entry.source}</TableCell>
                   <TableCell className="text-sm">{entry.target}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{entry.context || "--"}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{entry.note || "--"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -480,8 +471,6 @@ function VocabDialog({
   const { t } = useTranslation()
   const [name, setName] = useState(initial?.name ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
-  const [sourceLang, setSourceLang] = useState(initial?.source_lang ?? "ko")
-  const [targetLang, setTargetLang] = useState(initial?.target_lang ?? "en")
   const [entries, setEntries] = useState<VocabularyEntry[]>(
     initial?.entries ?? [{ id: "new-1", source: "", target: "" }]
   )
@@ -503,8 +492,6 @@ function VocabDialog({
         id: `csv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         source: row.source,
         target: row.target,
-        context: row.context ?? undefined,
-        note: row.note ?? undefined,
       }))
       setEntries((prev) => [...prev, ...mapped])
       toastSuccess(t("presets.vocab.imported", { count: rows.length }))
@@ -527,8 +514,8 @@ function VocabDialog({
     onSave({
       name: name.trim(),
       description: description.trim(),
-      source_lang: sourceLang,
-      target_lang: targetLang,
+      source_lang: initial?.source_lang ?? "",
+      target_lang: initial?.target_lang ?? "",
       entries: validEntries,
     })
     onOpenChange(false)
@@ -554,31 +541,6 @@ function VocabDialog({
                 <Input id="vocab-desc" value={description} onChange={(e) => setDescription(e.target.value)} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("presets.dialog.sourceLang")}</Label>
-                <Select value={sourceLang} onValueChange={setSourceLang}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {LANG_KEYS.map((k) => (
-                      <SelectItem key={k} value={k}>{t(`presets.lang.${k}`, k)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                <Label>{t("presets.dialog.targetLang")}</Label>
-                <Select value={targetLang} onValueChange={setTargetLang}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {LANG_KEYS.map((k) => (
-                      <SelectItem key={k} value={k}>{t(`presets.lang.${k}`, k)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
             <div className="flex flex-col gap-2">
               <Label>{t("presets.dialog.entries")}</Label>
               <div className="rounded-md border">
@@ -587,8 +549,6 @@ function VocabDialog({
                     <TableRow>
                       <TableHead>{t("presets.dialog.source")}</TableHead>
                       <TableHead>{t("presets.dialog.target")}</TableHead>
-                      <TableHead>{t("presets.dialog.context")}</TableHead>
-                      <TableHead>{t("presets.dialog.note")}</TableHead>
                       <TableHead className="w-[40px]" />
                     </TableRow>
                   </TableHeader>
@@ -600,12 +560,6 @@ function VocabDialog({
                         </TableCell>
                         <TableCell className="p-1">
                           <Input value={entry.target} onChange={(e) => updateEntry(entry.id, "target", e.target.value)} placeholder={t("presets.dialog.target")} className="h-8 text-sm" />
-                        </TableCell>
-                        <TableCell className="p-1">
-                          <Input value={entry.context ?? ""} onChange={(e) => updateEntry(entry.id, "context", e.target.value)} placeholder={t("presets.dialog.optional")} className="h-8 text-sm" />
-                        </TableCell>
-                        <TableCell className="p-1">
-                          <Input value={entry.note ?? ""} onChange={(e) => updateEntry(entry.id, "note", e.target.value)} placeholder={t("presets.dialog.optional")} className="h-8 text-sm" />
                         </TableCell>
                         <TableCell className="p-1">
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => removeEntry(entry.id)}>

@@ -8,6 +8,8 @@ import asyncio
 import json
 import logging
 import os
+import subprocess
+import tempfile
 import uuid
 from enum import Enum
 from pathlib import Path
@@ -150,13 +152,21 @@ class SttJobState(str, Enum):
 _stt_jobs: dict[str, dict[str, Any]] = {}
 
 
-def create_stt_job(file_path: str, language: str | None = None, model_id: str | None = None) -> str:
+def create_stt_job(
+    file_path: str,
+    language: str | None = None,
+    model_id: str | None = None,
+    start_time: float | None = None,
+    end_time: float | None = None,
+) -> str:
     job_id = str(uuid.uuid4())
     _stt_jobs[job_id] = {
         "id": job_id,
         "file_path": file_path,
         "language": language,
         "model_id": model_id,
+        "start_time": start_time,
+        "end_time": end_time,
         "state": SttJobState.QUEUED,
         "cancel_flag": False,
     }
@@ -282,6 +292,40 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
     file_path = job["file_path"]
     language = job.get("language")
     lang_arg = language if language and language != "auto" else None
+    start_time = job.get("start_time")
+    end_time = job.get("end_time")
+    time_offset = 0.0
+    temp_audio_path = None
+
+    # Extract segment with ffmpeg if time range specified
+    if start_time is not None and end_time is not None:
+        time_offset = start_time
+        try:
+            temp_audio_path = os.path.join(tempfile.gettempdir(), f"localsub_preview_{job_id}.wav")
+            cmd = [
+                "ffmpeg", "-y",
+                "-ss", str(start_time),
+                "-to", str(end_time),
+                "-i", file_path,
+                "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
+                temp_audio_path,
+            ]
+            log.info("[STT] Extracting audio segment: %s -> %s (%.1fs~%.1fs)", file_path, temp_audio_path, start_time, end_time)
+            result = subprocess.run(cmd, capture_output=True, timeout=60)
+            if result.returncode != 0:
+                log.warning("[STT] ffmpeg failed (rc=%d), falling back to full file", result.returncode)
+                temp_audio_path = None
+                time_offset = 0.0
+            else:
+                file_path = temp_audio_path
+        except FileNotFoundError:
+            log.warning("[STT] ffmpeg not found, falling back to full file")
+            temp_audio_path = None
+            time_offset = 0.0
+        except Exception as e:
+            log.warning("[STT] ffmpeg extraction failed: %s, falling back to full file", e)
+            temp_audio_path = None
+            time_offset = 0.0
 
     log.info("[STT] Starting whisper transcription: file=%s, lang=%s", file_path, lang_arg)
 
@@ -327,8 +371,8 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
 
         seg_data = {
             "index": index,
-            "start": round(segment.start, 3),
-            "end": round(segment.end, 3),
+            "start": round(segment.start + time_offset, 3),
+            "end": round(segment.end + time_offset, 3),
             "text": segment.text.strip(),
         }
         all_segments.append(seg_data)
@@ -360,6 +404,19 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
         max(_durations) if _durations else 0,
         duration,
     )
+
+    # Clean up temp audio file if created
+    if temp_audio_path and os.path.exists(temp_audio_path):
+        try:
+            os.remove(temp_audio_path)
+        except OSError:
+            pass
+
+    # Filter segments to time range if ffmpeg was not available (fallback)
+    if start_time is not None and end_time is not None and time_offset == 0.0:
+        all_segments = [s for s in all_segments if s["end"] > start_time and s["start"] < end_time]
+        for i, s in enumerate(all_segments):
+            s["index"] = i
 
     job["state"] = SttJobState.DONE
     log.info("[STT] Transcription complete, model kept loaded (Rust will unload before LLM)")

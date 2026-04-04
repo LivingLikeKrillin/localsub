@@ -11,11 +11,14 @@ import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Upload, X, FileVideo } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import { Upload, X, FileVideo, Eye, RefreshCw, Play, BookOpen, Plus, Trash2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Switch } from "@/components/ui/switch"
 import { pickFile } from "@/lib/tauriApi"
-import type { Preset, Vocabulary } from "@/types"
+import { usePreviewPipeline } from "@/hooks/usePreviewPipeline"
+import type { Preset, Vocabulary, VocabularyEntry } from "@/types"
 
 interface NewJobDialogProps {
   open: boolean
@@ -23,6 +26,9 @@ interface NewJobDialogProps {
   presets: Preset[]
   vocabularies: Vocabulary[]
   onSubmit: (files: SelectedFile[], presetId: string, enableDiarization: boolean, skipTranslation: boolean) => void
+  onUpdateVocabulary?: (vocab: Vocabulary) => Promise<unknown>
+  onAddVocabulary?: (vocab: Vocabulary) => Promise<unknown>
+  onUpdatePreset?: (preset: Preset) => Promise<unknown>
   initialFiles?: SelectedFile[]
 }
 
@@ -37,7 +43,97 @@ function formatSize(bytes: number) {
   return `${(bytes / 1e6).toFixed(0)} MB`
 }
 
-export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubmit, initialFiles }: NewJobDialogProps) {
+function parseTimeToSeconds(timeStr: string): number | null {
+  const parts = timeStr.trim().split(":")
+  if (parts.length === 2) {
+    const [m, s] = parts.map(Number)
+    if (!isNaN(m) && !isNaN(s)) return m * 60 + s
+  }
+  if (parts.length === 3) {
+    const [h, m, s] = parts.map(Number)
+    if (!isNaN(h) && !isNaN(m) && !isNaN(s)) return h * 3600 + m * 60 + s
+  }
+  return null
+}
+
+function formatTimestamp(seconds: number): string {
+  const m = Math.floor(seconds / 60)
+  const s = Math.floor(seconds % 60)
+  return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+}
+
+function InlineVocabEditor({ vocab, onSave }: { vocab: Vocabulary; onSave: (v: Vocabulary) => Promise<unknown> }) {
+  const [entries, setEntries] = useState<VocabularyEntry[]>(vocab.entries)
+  const [saving, setSaving] = useState(false)
+
+  // Sync when vocab changes externally
+  useEffect(() => { setEntries(vocab.entries) }, [vocab.entries])
+
+  function addEntry() {
+    setEntries((prev) => [...prev, { id: `new-${Date.now()}`, source: "", target: "" }])
+  }
+
+  function updateEntry(id: string, field: "source" | "target", value: string) {
+    setEntries((prev) => prev.map((e) => (e.id === id ? { ...e, [field]: value } : e)))
+  }
+
+  function removeEntry(id: string) {
+    setEntries((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    const valid = entries.filter((e) => e.source.trim() && e.target.trim())
+    await onSave({ ...vocab, entries: valid, updated_at: new Date().toISOString() })
+    setSaving(false)
+  }
+
+  return (
+    <div className="rounded-md border p-3 flex flex-col gap-2 bg-background">
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium">{vocab.name}</span>
+        <span className="text-[11px] text-muted-foreground">{entries.length} entries</span>
+      </div>
+      <div className="flex flex-col gap-1.5 max-h-52 overflow-y-auto p-0.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
+        {entries.map((entry) => (
+          <div key={entry.id} className="flex items-center gap-1.5">
+            <Input
+              value={entry.source}
+              onChange={(e) => updateEntry(entry.id, "source", e.target.value)}
+              placeholder="원문"
+              className="h-7 text-xs flex-1 min-w-0 focus-visible:ring-1 focus-visible:ring-offset-0"
+            />
+            <span className="text-muted-foreground text-xs shrink-0">→</span>
+            <Input
+              value={entry.target}
+              onChange={(e) => updateEntry(entry.id, "target", e.target.value)}
+              placeholder="번역"
+              className="h-7 text-xs flex-1 min-w-0 focus-visible:ring-1 focus-visible:ring-offset-0"
+            />
+            <button
+              type="button"
+              onClick={() => removeEntry(entry.id)}
+              className="shrink-0 p-0.5 text-muted-foreground hover:text-destructive"
+            >
+              <Trash2 className="h-3 w-3" />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={addEntry}>
+          <Plus className="mr-1 h-3 w-3" /> 추가
+        </Button>
+        <div className="flex-1" />
+        <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={saving}>
+          {saving ? "저장 중..." : "저장"}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubmit, onUpdateVocabulary, onAddVocabulary, onUpdatePreset, initialFiles }: NewJobDialogProps) {
   const { t } = useTranslation()
   const [files, setFiles] = useState<SelectedFile[]>([])
 
@@ -54,6 +150,26 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
   const [enableDiarization, setEnableDiarization] = useState(false)
   const [skipTranslation, setSkipTranslation] = useState(false)
   const [isDragging, setIsDragging] = useState(false)
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewStart, setPreviewStart] = useState("00:00")
+  const [previewDuration, setPreviewDuration] = useState("2")
+
+  const [vocabEditOpen, setVocabEditOpen] = useState(false)
+
+  const preview = usePreviewPipeline()
+
+  const handleStartPreview = useCallback(() => {
+    if (files.length === 0 || !selectedPreset) return
+    const startSec = parseTimeToSeconds(previewStart)
+    if (startSec === null) return
+    const endSec = startSec + Number(previewDuration) * 60
+    preview.startPreview(files[0].path, selectedPreset, startSec, endSec)
+  }, [files, selectedPreset, previewStart, previewDuration, preview])
+
+  const handleRetryPreviewTranslation = useCallback(() => {
+    if (!selectedPreset) return
+    preview.retryTranslation(selectedPreset)
+  }, [selectedPreset, preview])
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault()
@@ -108,15 +224,16 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
-        <DialogHeader>
+      <DialogContent className={`${showPreview ? "sm:max-w-3xl" : "sm:max-w-xl"} max-h-[85vh] flex flex-col overflow-hidden`}>
+        <DialogHeader className="shrink-0">
           <DialogTitle>{t("dashboard.newJob.title", "New Job")}</DialogTitle>
           <DialogDescription>
             {t("dashboard.newJob.description", "Upload files and select a preset to start processing.")}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex flex-col gap-5 py-2">
+        <div className="flex-1 min-h-0 overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
+          <div className="flex flex-col gap-5 py-2 pr-1">
           {/* File drop zone */}
           <div
             onDragOver={handleDragOver}
@@ -126,21 +243,35 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
             role="button"
             tabIndex={0}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") handleFileSelect() }}
-            className={`flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 transition-colors cursor-pointer ${
+            className={`flex items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors cursor-pointer ${
+              files.length > 0 ? "p-3" : "flex-col p-6"
+            } ${
               isDragging
                 ? "border-primary bg-primary/5"
-                : "border-muted-foreground/25 hover:border-muted-foreground/50"
+                : files.length > 0
+                  ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                  : "border-muted-foreground/25 hover:border-muted-foreground/50"
             }`}
           >
-            <div className="rounded-xl bg-muted/60 p-3 ring-1 ring-border">
-              <Upload className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              {t("dashboard.newJob.dropzone", "Drag and drop files here, or click to browse")}
-            </p>
-            <p className="text-xs text-muted-foreground/60">
-              {t("dashboard.newJob.supportedFormats")}
-            </p>
+            {files.length > 0 ? (
+              <>
+                <FileVideo className="h-4 w-4 text-primary shrink-0" />
+                <span className="text-sm text-primary font-medium">{files.length}개 파일 선택됨</span>
+                <span className="text-xs text-muted-foreground ml-1">— 클릭하여 추가</span>
+              </>
+            ) : (
+              <>
+                <div className="rounded-xl bg-muted/60 p-3 ring-1 ring-border">
+                  <Upload className="h-5 w-5 text-muted-foreground" />
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {t("dashboard.newJob.dropzone", "Drag and drop files here, or click to browse")}
+                </p>
+                <p className="text-xs text-muted-foreground/60">
+                  {t("dashboard.newJob.supportedFormats")}
+                </p>
+              </>
+            )}
           </div>
 
           {/* File list */}
@@ -247,17 +378,191 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
               {t("dashboard.newJob.noPresets", "No presets available. Create one in the Presets page.")}
             </p>
           )}
+
+          {/* Preview panel */}
+          {showPreview && (
+            <div className="rounded-lg border bg-muted/20 p-4 flex flex-col gap-3">
+              <div className="flex items-center gap-2">
+                <Eye className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium">미리보기</span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground shrink-0">시작</span>
+                <Input
+                  value={previewStart}
+                  onChange={(e) => setPreviewStart(e.target.value)}
+                  placeholder="MM:SS"
+                  className="w-24 h-8 text-sm text-center"
+                />
+                <span className="text-xs text-muted-foreground shrink-0">구간</span>
+                <select
+                  value={previewDuration}
+                  onChange={(e) => setPreviewDuration(e.target.value)}
+                  className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                >
+                  <option value="1">1분</option>
+                  <option value="2">2분</option>
+                  <option value="3">3분</option>
+                  <option value="4">4분</option>
+                  <option value="5">5분</option>
+                </select>
+                <div className="flex-1" />
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={handleStartPreview}
+                  disabled={files.length === 0 || !selectedPreset || preview.phase === "stt" || preview.phase === "translating"}
+                >
+                  <Play className="mr-1 h-3.5 w-3.5" />
+                  {preview.hasCachedStt ? "STT + 번역" : "실행"}
+                </Button>
+                {preview.hasCachedStt && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleRetryPreviewTranslation}
+                    disabled={preview.phase === "stt" || preview.phase === "translating"}
+                  >
+                    <RefreshCw className="mr-1 h-3.5 w-3.5" />
+                    번역만 재실행
+                  </Button>
+                )}
+              </div>
+
+              {/* Progress */}
+              {(preview.phase === "stt" || preview.phase === "translating") && (
+                <div className="flex flex-col gap-1.5">
+                  <Progress value={preview.progress} className="h-2" />
+                  <p className="text-xs text-muted-foreground">{preview.message}</p>
+                </div>
+              )}
+
+              {/* Error */}
+              {preview.phase === "error" && preview.error && (
+                <p className="text-xs text-destructive">{preview.error}</p>
+              )}
+
+              {/* Results table */}
+              {preview.results.length > 0 && (
+                <ScrollArea className="max-h-48">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b text-xs text-muted-foreground">
+                        <th className="text-left py-1.5 pr-2 w-16">시간</th>
+                        <th className="text-left py-1.5 pr-2">원문</th>
+                        <th className="text-left py-1.5">번역</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.results.map((r) => (
+                        <tr key={r.index} className="border-b border-muted/50">
+                          <td className="py-1.5 pr-2 text-xs text-muted-foreground whitespace-nowrap">
+                            {formatTimestamp(r.start)}
+                          </td>
+                          <td className="py-1.5 pr-2 text-xs">{r.original}</td>
+                          <td className="py-1.5 text-xs font-medium">
+                            {r.translated || <span className="text-muted-foreground">...</span>}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </ScrollArea>
+              )}
+
+              {preview.hasCachedStt && preview.phase !== "stt" && preview.phase !== "translating" && (
+                <p className="text-[11px] text-muted-foreground">
+                  STT 캐싱됨 — 용어 사전 수정 후 "번역만 재실행"으로 빠르게 테스트할 수 있습니다.
+                </p>
+              )}
+
+              {/* Vocab quick edit */}
+              {linkedVocab && onUpdateVocabulary ? (
+                <div className="flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-fit h-7 text-xs"
+                    onClick={() => setVocabEditOpen(!vocabEditOpen)}
+                  >
+                    <BookOpen className="mr-1 h-3 w-3" />
+                    {vocabEditOpen ? "용어 사전 닫기" : `용어 사전 편집 (${linkedVocab.entries.length})`}
+                  </Button>
+                  {vocabEditOpen && (
+                    <InlineVocabEditor
+                      vocab={linkedVocab}
+                      onSave={async (updated) => {
+                        await onUpdateVocabulary(updated)
+                      }}
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                  <BookOpen className="h-3 w-3 shrink-0" />
+                  <span>연결된 용어 사전 없음</span>
+                  {onAddVocabulary && onUpdatePreset && selectedPresetData && (
+                    <Button
+                      variant="link"
+                      size="sm"
+                      className="h-5 text-xs px-0"
+                      onClick={async () => {
+                        const now = new Date().toISOString()
+                        const baseName = "임시 용어 사전"
+                        const existingNames = new Set(vocabularies.map((v) => v.name))
+                        let vocabName = baseName
+                        let counter = 1
+                        while (existingNames.has(vocabName)) {
+                          vocabName = `${baseName}(${counter})`
+                          counter++
+                        }
+                        const newVocab: Vocabulary = {
+                          id: crypto.randomUUID(),
+                          name: vocabName,
+                          description: "",
+                          source_lang: selectedPresetData.source_lang,
+                          target_lang: selectedPresetData.target_lang,
+                          entries: [],
+                          created_at: now,
+                          updated_at: now,
+                        }
+                        await onAddVocabulary(newVocab)
+                        await onUpdatePreset({ ...selectedPresetData, vocabulary_id: newVocab.id, updated_at: now })
+                        setVocabEditOpen(true)
+                      }}
+                    >
+                      새로 만들기
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t("shared.cancel", "Cancel")}
-          </Button>
-          <Button onClick={handleSubmit} disabled={files.length === 0 || !selectedPreset}>
-            {files.length > 1
-              ? t("dashboard.newJob.startMultiple", { count: files.length, defaultValue: `Start ${files.length} jobs` })
-              : t("dashboard.newJob.start", "Start job")}
-          </Button>
+        <DialogFooter className="shrink-0">
+          <div className="flex items-center gap-2 w-full">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowPreview(!showPreview)}
+              disabled={files.length === 0 || !selectedPreset}
+              className="mr-auto"
+            >
+              <Eye className="mr-1.5 h-4 w-4" />
+              {showPreview ? "미리보기 닫기" : "미리보기"}
+            </Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              {t("shared.cancel", "Cancel")}
+            </Button>
+            <Button onClick={handleSubmit} disabled={files.length === 0 || !selectedPreset}>
+              {files.length > 1
+                ? t("dashboard.newJob.startMultiple", { count: files.length, defaultValue: `Start ${files.length} jobs` })
+                : t("dashboard.newJob.start", "Start job")}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>

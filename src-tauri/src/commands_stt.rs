@@ -15,6 +15,8 @@ pub async fn start_stt(
     state: State<'_, SharedState>,
     file_path: String,
     language: Option<String>,
+    start_time: Option<f64>,
+    end_time: Option<f64>,
 ) -> Result<Job, AppError> {
     let (port, config) = {
         let s = state.lock().map_err(|e| {
@@ -99,6 +101,12 @@ pub async fn start_stt(
     }
     if let Some(ref model_id) = whisper_model_id {
         body["model_id"] = serde_json::Value::String(model_id.clone());
+    }
+    if let Some(st) = start_time {
+        body["start_time"] = serde_json::json!(st);
+    }
+    if let Some(et) = end_time {
+        body["end_time"] = serde_json::json!(et);
     }
 
     // POST /stt/start

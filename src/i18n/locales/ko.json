@@ -357,11 +357,8 @@
     "close": "닫기",
     "tabs": {
       "general": "일반",
-      "paths": "경로",
       "models": "모델",
-      "performance": "성능",
-      "system": "시스템",
-      "about": "정보"
+      "info": "정보"
     },
     "general": {
       "title": "일반 설정",

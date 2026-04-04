@@ -264,11 +264,8 @@ export type MainPage = "dashboard" | "editor" | "presets" | "settings";
 export type WizardStep = 1 | 2 | 3 | 4 | 5;
 export type SettingsTab =
   | "general"
-  | "paths"
   | "models"
-  | "performance"
-  | "system"
-  | "about";
+  | "info";
 
 // ── Download tracking ──
 

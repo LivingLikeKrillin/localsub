@@ -357,11 +357,8 @@
     "close": "Close",
     "tabs": {
       "general": "General",
-      "paths": "Paths",
       "models": "Models",
-      "performance": "Performance",
-      "system": "System",
-      "about": "About"
+      "info": "Info"
     },
     "general": {
       "title": "General Settings",

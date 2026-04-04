@@ -2,10 +2,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
   Settings2,
-  FolderOpen,
   HardDrive,
-  Gauge,
-  Monitor,
   Info,
   RotateCcw,
 } from "lucide-react"
@@ -22,20 +19,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toastSuccess, toastError } from "@/lib/toast"
 import { GeneralSection } from "./GeneralSection"
-import { PathsSection } from "./PathsSection"
 import { ModelsSection } from "./ModelsSection"
-import { PerformanceSection } from "./PerformanceSection"
-import { SystemSection } from "./SystemSection"
-import { AboutSection } from "./AboutSection"
+import { InfoSection } from "./InfoSection"
 import type { AppConfig, PartialConfig, ModelManifestEntry, ModelCatalog, HardwareInfo, SettingsTab, DownloadProgress } from "@/types"
 
 const TABS: { value: SettingsTab; icon: typeof Settings2; labelKey: string }[] = [
   { value: "general", icon: Settings2, labelKey: "settings.tabs.general" },
-  { value: "paths", icon: FolderOpen, labelKey: "settings.tabs.paths" },
   { value: "models", icon: HardDrive, labelKey: "settings.tabs.models" },
-  { value: "performance", icon: Gauge, labelKey: "settings.tabs.performance" },
-  { value: "system", icon: Monitor, labelKey: "settings.tabs.system" },
-  { value: "about", icon: Info, labelKey: "settings.tabs.about" },
+  { value: "info", icon: Info, labelKey: "settings.tabs.info" },
 ]
 
 interface SettingsPageProps {
@@ -66,16 +57,8 @@ export function SettingsPage({
   const [resetDialogOpen, setResetDialogOpen] = useState(false)
 
   const DEFAULT_CONFIG: PartialConfig = {
-    profile: "lite",
     subtitle_format: "srt",
-    source_language: "auto",
-    target_language: "ko",
-    translation_mode: "local",
-    context_window: 2,
-    style_preset: "natural",
-    gpu_acceleration: null,
-    max_concurrent_jobs: null,
-    max_memory_mb: null,
+    max_concurrent_jobs: 1,
   }
 
   function handleResetDefaults() {
@@ -140,9 +123,6 @@ export function SettingsPage({
           {activeTab === "general" && (
             <GeneralSection config={config} onUpdate={onUpdateConfig} />
           )}
-          {activeTab === "paths" && (
-            <PathsSection config={config} onUpdate={onUpdateConfig} />
-          )}
           {activeTab === "models" && (
             <ModelsSection
               manifest={manifest}
@@ -160,14 +140,8 @@ export function SettingsPage({
               targetLanguage={config.target_language}
             />
           )}
-          {activeTab === "performance" && (
-            <PerformanceSection config={config} onUpdate={onUpdateConfig} />
-          )}
-          {activeTab === "system" && (
-            <SystemSection />
-          )}
-          {activeTab === "about" && (
-            <AboutSection />
+          {activeTab === "info" && (
+            <InfoSection />
           )}
         </div>
       </div>

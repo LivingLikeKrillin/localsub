@@ -66,7 +66,35 @@
       "skipTranslation": "STT Only",
       "skipTranslationDesc": "Transcribe only — skip the translation step",
       "enableDiarization": "Speaker Diarization",
-      "enableDiarizationDesc": "Detect and label different speakers in the audio"
+      "enableDiarizationDesc": "Detect and label different speakers in the audio",
+      "preview": {
+        "title": "Preview",
+        "open": "Preview",
+        "close": "Close Preview",
+        "start": "Start",
+        "startLabel": "Start",
+        "duration": "Duration",
+        "maxMinutes": "max {{max}} min",
+        "run": "Run",
+        "runSttAndTranslate": "STT + Translate",
+        "retryTranslation": "Re-translate only",
+        "time": "Time",
+        "original": "Original",
+        "translated": "Translated",
+        "sttCached": "STT cached — edit vocabulary then click 'Re-translate only' to test quickly.",
+        "noVocab": "No linked vocabulary",
+        "createVocab": "Create new",
+        "editVocab": "Edit vocabulary",
+        "closeVocab": "Close vocabulary",
+        "tempVocabName": "Temp vocabulary",
+        "source": "Source",
+        "target": "Target",
+        "add": "Add",
+        "save": "Save",
+        "saving": "Saving...",
+        "filesSelected": "{{count}} file(s) selected",
+        "clickToAdd": "— click to add more"
+      }
     }
   },
   "editor": {

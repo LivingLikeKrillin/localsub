@@ -63,6 +63,7 @@ function formatTimestamp(seconds: number): string {
 }
 
 function InlineVocabEditor({ vocab, onSave }: { vocab: Vocabulary; onSave: (v: Vocabulary) => Promise<unknown> }) {
+  const { t } = useTranslation()
   const [entries, setEntries] = useState<VocabularyEntry[]>(vocab.entries)
   const [saving, setSaving] = useState(false)
 
@@ -100,14 +101,14 @@ function InlineVocabEditor({ vocab, onSave }: { vocab: Vocabulary; onSave: (v: V
             <Input
               value={entry.source}
               onChange={(e) => updateEntry(entry.id, "source", e.target.value)}
-              placeholder="원문"
+              placeholder={t("dashboard.newJob.preview.source")}
               className="h-7 text-xs flex-1 min-w-0 focus-visible:ring-1 focus-visible:ring-offset-0"
             />
             <span className="text-muted-foreground text-xs shrink-0">→</span>
             <Input
               value={entry.target}
               onChange={(e) => updateEntry(entry.id, "target", e.target.value)}
-              placeholder="번역"
+              placeholder={t("dashboard.newJob.preview.target")}
               className="h-7 text-xs flex-1 min-w-0 focus-visible:ring-1 focus-visible:ring-offset-0"
             />
             <button
@@ -122,11 +123,11 @@ function InlineVocabEditor({ vocab, onSave }: { vocab: Vocabulary; onSave: (v: V
       </div>
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" className="h-7 text-xs" onClick={addEntry}>
-          <Plus className="mr-1 h-3 w-3" /> 추가
+          <Plus className="mr-1 h-3 w-3" /> {t("dashboard.newJob.preview.add")}
         </Button>
         <div className="flex-1" />
         <Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={saving}>
-          {saving ? "저장 중..." : "저장"}
+          {saving ? t("dashboard.newJob.preview.saving") : t("dashboard.newJob.preview.save")}
         </Button>
       </div>
     </div>
@@ -256,8 +257,8 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
             {files.length > 0 ? (
               <>
                 <FileVideo className="h-4 w-4 text-primary shrink-0" />
-                <span className="text-sm text-primary font-medium">{files.length}개 파일 선택됨</span>
-                <span className="text-xs text-muted-foreground ml-1">— 클릭하여 추가</span>
+                <span className="text-sm text-primary font-medium">{t("dashboard.newJob.preview.filesSelected", { count: files.length })}</span>
+                <span className="text-xs text-muted-foreground ml-1">{t("dashboard.newJob.preview.clickToAdd")}</span>
               </>
             ) : (
               <>
@@ -384,28 +385,26 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
             <div className="rounded-lg border bg-muted/20 p-4 flex flex-col gap-3">
               <div className="flex items-center gap-2">
                 <Eye className="h-4 w-4 text-primary" />
-                <span className="text-sm font-medium">미리보기</span>
+                <span className="text-sm font-medium">{t("dashboard.newJob.preview.title")}</span>
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground shrink-0">시작</span>
+                <span className="text-xs text-muted-foreground shrink-0">{t("dashboard.newJob.preview.startLabel")}</span>
                 <Input
                   value={previewStart}
                   onChange={(e) => setPreviewStart(e.target.value)}
                   placeholder="MM:SS"
                   className="w-24 h-8 text-sm text-center"
                 />
-                <span className="text-xs text-muted-foreground shrink-0">구간</span>
+                <span className="text-xs text-muted-foreground shrink-0">{t("dashboard.newJob.preview.duration")}</span>
                 <select
                   value={previewDuration}
                   onChange={(e) => setPreviewDuration(e.target.value)}
                   className="h-8 rounded-md border border-input bg-background px-2 text-sm"
                 >
-                  <option value="1">1분</option>
-                  <option value="2">2분</option>
-                  <option value="3">3분</option>
-                  <option value="4">4분</option>
-                  <option value="5">5분</option>
+                  {[1,2,3,4,5].map((m) => (
+                    <option key={m} value={String(m)}>{m} min</option>
+                  ))}
                 </select>
                 <div className="flex-1" />
                 <Button
@@ -415,7 +414,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                   disabled={files.length === 0 || !selectedPreset || preview.phase === "stt" || preview.phase === "translating"}
                 >
                   <Play className="mr-1 h-3.5 w-3.5" />
-                  {preview.hasCachedStt ? "STT + 번역" : "실행"}
+                  {preview.hasCachedStt ? t("dashboard.newJob.preview.runSttAndTranslate") : t("dashboard.newJob.preview.run")}
                 </Button>
                 {preview.hasCachedStt && (
                   <Button
@@ -425,7 +424,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                     disabled={preview.phase === "stt" || preview.phase === "translating"}
                   >
                     <RefreshCw className="mr-1 h-3.5 w-3.5" />
-                    번역만 재실행
+                    {t("dashboard.newJob.preview.retryTranslation")}
                   </Button>
                 )}
               </div>
@@ -449,9 +448,9 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-xs text-muted-foreground">
-                        <th className="text-left py-1.5 pr-2 w-16">시간</th>
-                        <th className="text-left py-1.5 pr-2">원문</th>
-                        <th className="text-left py-1.5">번역</th>
+                        <th className="text-left py-1.5 pr-2 w-16">{t("dashboard.newJob.preview.time")}</th>
+                        <th className="text-left py-1.5 pr-2">{t("dashboard.newJob.preview.original")}</th>
+                        <th className="text-left py-1.5">{t("dashboard.newJob.preview.translated")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -473,7 +472,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
 
               {preview.hasCachedStt && preview.phase !== "stt" && preview.phase !== "translating" && (
                 <p className="text-[11px] text-muted-foreground">
-                  STT 캐싱됨 — 용어 사전 수정 후 "번역만 재실행"으로 빠르게 테스트할 수 있습니다.
+                  {t("dashboard.newJob.preview.sttCached")}
                 </p>
               )}
 
@@ -487,7 +486,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                     onClick={() => setVocabEditOpen(!vocabEditOpen)}
                   >
                     <BookOpen className="mr-1 h-3 w-3" />
-                    {vocabEditOpen ? "용어 사전 닫기" : `용어 사전 편집 (${linkedVocab.entries.length})`}
+                    {vocabEditOpen ? t("dashboard.newJob.preview.closeVocab") : `${t("dashboard.newJob.preview.editVocab")} (${linkedVocab.entries.length})`}
                   </Button>
                   {vocabEditOpen && (
                     <InlineVocabEditor
@@ -501,7 +500,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
               ) : (
                 <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
                   <BookOpen className="h-3 w-3 shrink-0" />
-                  <span>연결된 용어 사전 없음</span>
+                  <span>{t("dashboard.newJob.preview.noVocab")}</span>
                   {onAddVocabulary && onUpdatePreset && selectedPresetData && (
                     <Button
                       variant="link"
@@ -509,7 +508,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                       className="h-5 text-xs px-0"
                       onClick={async () => {
                         const now = new Date().toISOString()
-                        const baseName = "임시 용어 사전"
+                        const baseName = t("dashboard.newJob.preview.tempVocabName")
                         const existingNames = new Set(vocabularies.map((v) => v.name))
                         let vocabName = baseName
                         let counter = 1
@@ -532,7 +531,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                         setVocabEditOpen(true)
                       }}
                     >
-                      새로 만들기
+                      {t("dashboard.newJob.preview.createVocab")}
                     </Button>
                   )}
                 </div>
@@ -552,7 +551,7 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
               className="mr-auto"
             >
               <Eye className="mr-1.5 h-4 w-4" />
-              {showPreview ? "미리보기 닫기" : "미리보기"}
+              {showPreview ? t("dashboard.newJob.preview.close") : t("dashboard.newJob.preview.open")}
             </Button>
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               {t("shared.cancel", "Cancel")}

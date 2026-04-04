@@ -66,7 +66,35 @@
       "skipTranslation": "음성 인식만",
       "skipTranslationDesc": "음성 인식만 수행하고 번역 단계를 건너뜁니다",
       "enableDiarization": "화자 검출",
-      "enableDiarizationDesc": "오디오에서 서로 다른 화자를 감지하고 라벨을 지정합니다"
+      "enableDiarizationDesc": "오디오에서 서로 다른 화자를 감지하고 라벨을 지정합니다",
+      "preview": {
+        "title": "미리보기",
+        "open": "미리보기",
+        "close": "미리보기 닫기",
+        "start": "시작",
+        "startLabel": "시작",
+        "duration": "구간",
+        "maxMinutes": "최대 {{max}}분",
+        "run": "실행",
+        "runSttAndTranslate": "STT + 번역",
+        "retryTranslation": "번역만 재실행",
+        "time": "시간",
+        "original": "원문",
+        "translated": "번역",
+        "sttCached": "STT 캐싱됨 — 용어 사전 수정 후 '번역만 재실행'으로 빠르게 테스트할 수 있습니다.",
+        "noVocab": "연결된 용어 사전 없음",
+        "createVocab": "새로 만들기",
+        "editVocab": "용어 사전 편집",
+        "closeVocab": "용어 사전 닫기",
+        "tempVocabName": "임시 용어 사전",
+        "source": "원문",
+        "target": "번역",
+        "add": "추가",
+        "save": "저장",
+        "saving": "저장 중...",
+        "filesSelected": "{{count}}개 파일 선택됨",
+        "clickToAdd": "— 클릭하여 추가"
+      }
     }
   },
   "editor": {

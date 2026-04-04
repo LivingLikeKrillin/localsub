@@ -22,8 +22,11 @@ interface GeneralSectionProps {
 }
 
 const LANGUAGES = [
-  { value: "en", labelKey: "settings.language.en" },
-  { value: "ko", labelKey: "settings.language.ko" },
+  { value: "en", label: "English" },
+  { value: "ko", label: "한국어" },
+  { value: "ja", label: "日本語" },
+  { value: "zh-CN", label: "简体中文" },
+  { value: "es", label: "Español" },
 ]
 
 const FORMATS = [
@@ -65,7 +68,7 @@ export function GeneralSection({ config, onUpdate }: GeneralSectionProps) {
           {LANGUAGES.map((lang) => (
             <div key={lang.value} className="flex items-center gap-2">
               <RadioGroupItem value={lang.value} id={`lang-${lang.value}`} />
-              <Label htmlFor={`lang-${lang.value}`} className="font-normal cursor-pointer">{t(lang.labelKey as never)}</Label>
+              <Label htmlFor={`lang-${lang.value}`} className="font-normal cursor-pointer">{lang.label}</Label>
             </div>
           ))}
         </RadioGroup>

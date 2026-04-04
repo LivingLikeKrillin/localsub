@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -99,23 +98,6 @@ export function GeneralSection({ config, onUpdate }: GeneralSectionProps) {
         <p className="text-xs text-muted-foreground">{t("settings.paths.outputDirDesc")}</p>
       </div>
 
-      <Separator />
-
-      {/* Max Concurrent Jobs */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between">
-          <Label>{t("settings.performance.concurrentJobs")}</Label>
-          <span className="text-sm tabular-nums text-muted-foreground">{config.max_concurrent_jobs ?? 1}</span>
-        </div>
-        <Slider
-          value={[config.max_concurrent_jobs ?? 1]}
-          onValueChange={([v]) => onUpdate({ max_concurrent_jobs: v })}
-          min={1}
-          max={4}
-          step={1}
-          className="w-full"
-        />
-      </div>
     </div>
   )
 }

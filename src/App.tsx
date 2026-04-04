@@ -147,13 +147,13 @@ function App() {
   const { processJob, retryTranslation } = usePipeline(handleJobUpdate, handleLiveSegments);
 
   const drainQueue = useCallback(() => {
-    const maxConcurrent = config?.max_concurrent_jobs ?? 1;
-    while (queueRef.current.length > 0 && activeCountRef.current < maxConcurrent) {
+    // GPU pipeline must run one at a time (VRAM shared between STT and LLM)
+    while (queueRef.current.length > 0 && activeCountRef.current < 1) {
       const entry = queueRef.current.shift()!;
       activeCountRef.current++;
       processJob(entry.jobId, entry.filePath, entry.sourceLanguage, entry.enableDiarization, entry.skipTranslation, entry.presetId);
     }
-  }, [processJob, config?.max_concurrent_jobs]);
+  }, [processJob]);
   drainQueueRef.current = drainQueue;
 
   const screen = determineScreen(configLoading, config, setupStatus);

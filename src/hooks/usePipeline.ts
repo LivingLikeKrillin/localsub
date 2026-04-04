@@ -95,6 +95,13 @@ export function usePipeline(
               progress: Math.round(job.progress),
             });
           } else if (job.state === "DONE") {
+            // Mark STT as 100% complete
+            onJobUpdate(pipeline.dashboardJobId, {
+              status: "processing",
+              stage: "stt",
+              progress: 100,
+            });
+
             // Clean STT output before passing to next stage
             pipeline.segments = cleanSttSegments(pipeline.segments);
 

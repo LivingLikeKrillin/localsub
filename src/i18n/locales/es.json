@@ -68,9 +68,9 @@
       "enableDiarization": "Diarización de hablantes",
       "enableDiarizationDesc": "Detectar y etiquetar diferentes hablantes en el audio",
       "preview": {
-        "title": "Vista previa",
-        "open": "Vista previa",
-        "close": "Cerrar vista previa",
+        "title": "Traducción de muestra",
+        "open": "Traducción de muestra",
+        "close": "Cerrar muestra",
         "start": "Inicio",
         "startLabel": "Inicio",
         "duration": "Duración",

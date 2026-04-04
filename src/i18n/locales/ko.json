@@ -68,9 +68,9 @@
       "enableDiarization": "화자 검출",
       "enableDiarizationDesc": "오디오에서 서로 다른 화자를 감지하고 라벨을 지정합니다",
       "preview": {
-        "title": "미리보기",
-        "open": "미리보기",
-        "close": "미리보기 닫기",
+        "title": "샘플 번역",
+        "open": "샘플 번역",
+        "close": "샘플 닫기",
         "start": "시작",
         "startLabel": "시작",
         "duration": "구간",

@@ -330,7 +330,7 @@ pub fn install_llm_package(app: &AppHandle) -> Result<String, AppError> {
             let mut c = Command::new(&pip_exe);
             c.arg("install")
                 .arg("--no-user")
-                .arg("llama-cpp-python>=0.3.0")
+                .arg("llama-cpp-python==0.3.20")
                 .arg("--extra-index-url")
                 .arg("https://abetlen.github.io/llama-cpp-python/whl/cu121")
                 .arg("--target")
@@ -342,7 +342,7 @@ pub fn install_llm_package(app: &AppHandle) -> Result<String, AppError> {
                 .arg("pip")
                 .arg("install")
                 .arg("--no-user")
-                .arg("llama-cpp-python>=0.3.0")
+                .arg("llama-cpp-python==0.3.20")
                 .arg("--extra-index-url")
                 .arg("https://abetlen.github.io/llama-cpp-python/whl/cu121")
                 .arg("--target")
@@ -379,7 +379,7 @@ pub fn install_llm_package(app: &AppHandle) -> Result<String, AppError> {
         let mut c = Command::new(&pip_exe);
         c.arg("install")
             .arg("--no-user")
-            .arg("llama-cpp-python>=0.3.0")
+            .arg("llama-cpp-python==0.3.20")
             .arg("--target")
             .arg(&env_dir);
         c
@@ -389,7 +389,7 @@ pub fn install_llm_package(app: &AppHandle) -> Result<String, AppError> {
             .arg("pip")
             .arg("install")
             .arg("--no-user")
-            .arg("llama-cpp-python>=0.3.0")
+            .arg("llama-cpp-python==0.3.20")
             .arg("--target")
             .arg(&env_dir);
         c

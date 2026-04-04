@@ -68,9 +68,9 @@
       "enableDiarization": "Speaker Diarization",
       "enableDiarizationDesc": "Detect and label different speakers in the audio",
       "preview": {
-        "title": "Preview",
-        "open": "Preview",
-        "close": "Close Preview",
+        "title": "Sample Translation",
+        "open": "Sample Translation",
+        "close": "Close Sample",
         "start": "Start",
         "startLabel": "Start",
         "duration": "Duration",

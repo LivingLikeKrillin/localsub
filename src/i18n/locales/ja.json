@@ -68,9 +68,9 @@
       "enableDiarization": "話者分離",
       "enableDiarizationDesc": "音声中の異なる話者を検出してラベル付けします",
       "preview": {
-        "title": "プレビュー",
-        "open": "プレビュー",
-        "close": "プレビューを閉じる",
+        "title": "サンプル翻訳",
+        "open": "サンプル翻訳",
+        "close": "サンプルを閉じる",
         "start": "開始",
         "startLabel": "開始",
         "duration": "区間",

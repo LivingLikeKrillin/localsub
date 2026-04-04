@@ -68,9 +68,9 @@
       "enableDiarization": "说话人分离",
       "enableDiarizationDesc": "检测并标注音频中的不同说话人",
       "preview": {
-        "title": "预览",
-        "open": "预览",
-        "close": "关闭预览",
+        "title": "翻译采样",
+        "open": "翻译采样",
+        "close": "关闭采样",
         "start": "开始",
         "startLabel": "开始",
         "duration": "时长",

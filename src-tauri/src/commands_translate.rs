@@ -21,7 +21,7 @@ pub async fn start_translate(
         let s = state.lock().map_err(|e| {
             AppError::InvalidState(format!("Lock error: {}", e))
         })?;
-        if s.server_status != ServerStatus::RUNNING {
+        if s.server_status == ServerStatus::STOPPED || s.server_status == ServerStatus::ERROR {
             return Err(AppError::InvalidState("Server is not running".into()));
         }
         let config = s
@@ -61,14 +61,8 @@ pub async fn start_translate(
         }
     }
 
-    // Unload Whisper to free VRAM before loading LLM
-    let unload_client = reqwest::Client::new();
-    let _ = unload_client
-        .post(format!("http://127.0.0.1:{}/runtime/unload", port))
-        .json(&serde_json::json!({"model_type": "whisper"}))
-        .send()
-        .await;
-    log::info!("Unloaded Whisper model to free VRAM for LLM");
+    // Note: Server restart for VRAM cleanup is handled by frontend (usePipeline)
+    // Frontend stops server, starts fresh, then calls startTranslate
 
     // Load glossary
     let glossary: Vec<GlossaryEntry> =

@@ -208,19 +208,29 @@ pub fn start_resource_polling(app: AppHandle, port: u16) -> CancellationToken {
                 Err(_) => false,
             };
 
+            // Check if a model is currently loading (GIL blocks health response)
+            let is_model_loading = {
+                let state = app.state::<SharedState>();
+                state.lock().map(|s| s.model_loading).unwrap_or(false)
+            };
+
             if health_ok {
                 consecutive_failures = 0;
+            } else if is_model_loading {
+                // Model loading blocks the Python GIL — health failures are expected
+                log::debug!("Health check failed during model loading, ignoring");
             } else {
                 consecutive_failures += 1;
                 log::warn!(
-                    "Health check failed ({}/3 consecutive failures)",
+                    "Health check failed ({}/10 consecutive failures)",
                     consecutive_failures
                 );
             }
 
-            // 3 consecutive failures → server crashed
-            if consecutive_failures >= 3 {
-                log::error!("Server health check failed 3 times consecutively, emitting server-crashed");
+            // 10 consecutive failures (~30s) → server crashed
+            // But skip if model_loading is set (intentional server restart)
+            if consecutive_failures >= 10 && !is_model_loading {
+                log::error!("Server health check failed 10 times consecutively, emitting server-crashed");
                 let state = app.state::<SharedState>();
                 if let Ok(mut s) = state.lock() {
                     s.server_status = crate::state::ServerStatus::ERROR;

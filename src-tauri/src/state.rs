@@ -354,6 +354,7 @@ pub struct AppState {
     pub active_downloads: HashMap<String, CancellationToken>,
     pub runtime_status: RuntimeStatus,
     pub poll_cancel: Option<CancellationToken>,
+    pub model_loading: bool,
 }
 
 impl Default for AppState {
@@ -373,6 +374,7 @@ impl Default for AppState {
             active_downloads: HashMap::new(),
             runtime_status: RuntimeStatus::default(),
             poll_cancel: None,
+            model_loading: false,
         }
     }
 }

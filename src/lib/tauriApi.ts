@@ -28,6 +28,10 @@ export async function stopServer(): Promise<void> {
   await invoke("stop_server");
 }
 
+export async function restartServer(): Promise<void> {
+  await invoke("restart_server");
+}
+
 export async function getServerStatus(): Promise<ServerStatus> {
   return invoke<ServerStatus>("get_server_status");
 }

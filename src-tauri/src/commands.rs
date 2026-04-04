@@ -1,3 +1,4 @@
+use std::process::Command;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::commands_runtime;
@@ -7,6 +8,19 @@ use crate::python_manager;
 use crate::setup_manager;
 use crate::sse_client;
 use crate::state::{RuntimeModelStatus, RuntimeStatus, ServerStatus, SetupStatus, SharedState};
+
+/// Query free VRAM in MB via nvidia-smi. Returns None if unavailable.
+fn get_vram_free_mb() -> Option<u64> {
+    let output = Command::new("nvidia-smi")
+        .args(["--query-gpu=memory.free", "--format=csv,noheader,nounits"])
+        .output()
+        .ok()?;
+    if !output.status.success() {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&output.stdout);
+    text.trim().parse::<u64>().ok()
+}
 
 #[tauri::command]
 pub async fn check_setup(
@@ -149,6 +163,79 @@ pub async fn start_server(
         }
     });
 
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn restart_server(
+    app: AppHandle,
+    state: State<'_, SharedState>,
+) -> Result<(), AppError> {
+    log::info!("Restarting Python server (VRAM cleanup)");
+    let port;
+    {
+        let mut s = state.lock().expect("Failed to lock state");
+        // Cancel existing polling
+        if let Some(token) = s.poll_cancel.take() {
+            token.cancel();
+        }
+        // Kill old server
+        if let Some(ref mut child) = s.server_process {
+            let _ = python_manager::kill_server(child);
+        }
+        s.server_process = None;
+        s.server_status = ServerStatus::STARTING;
+        s.model_loading = true;
+        let _ = app.emit("server-status", &s.server_status);
+        port = s.python_port;
+    }
+
+    // Wait for CUDA VRAM to be released after process kill
+    for attempt in 0..20 {
+        let vram_free = get_vram_free_mb();
+        if let Some(free) = vram_free {
+            log::info!("VRAM free: {} MB (attempt {})", free, attempt + 1);
+            // Need at least 6000 MB free for LLM (9B Q4 model)
+            if free > 6000 {
+                break;
+            }
+        } else {
+            // nvidia-smi not available, just wait a fixed time
+            if attempt >= 3 {
+                break;
+            }
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+
+    {
+        let mut s = state.lock().expect("Failed to lock state");
+        // Spawn new server
+        match python_manager::spawn_python_server(&app, port) {
+            Ok(child) => { s.server_process = Some(child); }
+            Err(e) => {
+                s.server_status = ServerStatus::ERROR;
+                let _ = app.emit("server-status", &s.server_status);
+                return Err(e);
+            }
+        }
+    }
+
+    // Wait for healthy (blocking — caller awaits)
+    python_manager::wait_for_healthy(port).await.map_err(|e| {
+        AppError::PythonServer(format!("Server restart failed: {}", e))
+    })?;
+
+    {
+        let mut s = state.lock().expect("Failed to lock state");
+        s.server_status = ServerStatus::RUNNING;
+        s.model_loading = false;
+        let _ = app.emit("server-status", &s.server_status);
+        // Don't start polling yet — LLM loading will block GIL and cause false health failures.
+        // Polling will be started by the translate SSE handler after the first event arrives.
+    }
+
+    log::info!("Python server restarted successfully (polling deferred)");
     Ok(())
 }
 

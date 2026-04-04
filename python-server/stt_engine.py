@@ -81,6 +81,13 @@ def _load_whisper(model_id: str) -> bool:
     _loaded_model_id = model_id
     _engine_type = "whisper"
     log.info("Loaded Whisper model: %s (device=%s)", model_id, device)
+    try:
+        import torch
+        if torch.cuda.is_available():
+            free, total = torch.cuda.mem_get_info()
+            log.info("[STT] VRAM after load: %.0f/%.0f MB free", free / 1024 / 1024, total / 1024 / 1024)
+    except ImportError:
+        pass
     return True
 
 
@@ -130,9 +137,22 @@ def _load_qwen3_asr(model_id: str) -> bool:
 
 def unload_model() -> None:
     global _model, _loaded_model_id, _engine_type
+    log.info("[STT] Unloading model: %s", _loaded_model_id)
+    if _model is not None:
+        del _model
     _model = None
     _loaded_model_id = None
     _engine_type = None
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            vram_free = torch.cuda.mem_get_info()[0] / (1024 * 1024)
+            log.info("[STT] CUDA cache cleared, VRAM free: %.0f MB", vram_free)
+    except ImportError:
+        pass
 
 
 def is_model_loaded() -> bool:

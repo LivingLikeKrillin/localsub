@@ -9,6 +9,7 @@ import {
   startTranslate,
   cancelTranslate,
   saveJobSubtitles,
+  restartServer,
 } from "../lib/tauriApi";
 import { toastError } from "../lib/toast";
 import { cleanSttSegments } from "../lib/sttCleaner";
@@ -298,9 +299,13 @@ export function usePipeline(
     }
   }
 
+  const translationStartingRef = useRef(new Set<string>());
+
   async function chainTranslation(pipeline: ActivePipeline) {
     // Guard: prevent duplicate translation starts
     if (pipeline.translateJobId) return;
+    if (translationStartingRef.current.has(pipeline.dashboardJobId)) return;
+    translationStartingRef.current.add(pipeline.dashboardJobId);
 
     if (pipeline.segments.length === 0) {
       // No segments — skip translation
@@ -324,6 +329,10 @@ export function usePipeline(
     });
 
     try {
+      // Restart server to cleanly free VRAM
+      // (ctranslate2 Whisper unload segfaults on Windows — known CTranslate2 bug)
+      await restartServer();
+
       const job = await startTranslate(pipeline.segments, pipeline.presetId);
       pipeline.translateJobId = job.id;
     } catch (e) {
@@ -338,6 +347,8 @@ export function usePipeline(
         error: errorMsg,
       });
       pipelinesRef.current.delete(pipeline.dashboardJobId);
+    } finally {
+      translationStartingRef.current.delete(pipeline.dashboardJobId);
     }
   }
 

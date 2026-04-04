@@ -1,8 +1,11 @@
 """Runtime management router — model status, load/unload, resource usage."""
 
 import asyncio
+import logging
 import os
 import subprocess
+
+log = logging.getLogger(__name__)
 
 import psutil
 from fastapi import APIRouter, HTTPException
@@ -89,6 +92,19 @@ async def unload_model(req: UnloadRequest):
         llm_engine.unload_model()
     else:
         raise HTTPException(status_code=400, detail=f"Unknown model_type: {req.model_type}")
+
+    # Verify VRAM is actually freed
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            vram_free = torch.cuda.mem_get_info()[0] / (1024 * 1024)
+            vram_total = torch.cuda.mem_get_info()[1] / (1024 * 1024)
+            log.info("[UNLOAD] %s unloaded. VRAM: %.0f/%.0f MB free", req.model_type, vram_free, vram_total)
+    except ImportError:
+        pass
 
     return UnloadResponse(status="UNLOADED", model_type=req.model_type)
 

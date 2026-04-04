@@ -24,19 +24,11 @@ export function useServerStatus() {
       }
     });
 
-    // Listen for server crash — auto-restart
+    // Listen for server crash — update status only (restart handled by pipeline)
     const unlistenCrash = listen("server-crashed", () => {
       setStatus("ERROR");
       setError("Server crashed");
       toastError(i18n.t("toast.serverCrashed"));
-      // Auto-restart after 2 seconds
-      setTimeout(async () => {
-        try {
-          await startServer();
-        } catch (e) {
-          console.error("Auto-restart failed:", e);
-        }
-      }, 2000);
     });
 
     return () => {

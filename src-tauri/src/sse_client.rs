@@ -192,8 +192,16 @@ pub async fn subscribe_to_stt_stream(app: AppHandle, job_id: String, port: u16) 
                 }
             }
             Err(err) => {
-                log::error!("STT SSE error for job {}: {}", job_id, err);
-                update_job_error(&app, &job_id, &format!("SSE connection error: {}", err));
+                // Check if this is an intentional server restart (model switching)
+                let is_model_loading = app.try_state::<SharedState>()
+                    .and_then(|s| s.lock().ok().map(|s| s.model_loading))
+                    .unwrap_or(false);
+                if is_model_loading {
+                    log::info!("STT SSE disconnected during model switch for job {}, ignoring", job_id);
+                } else {
+                    log::error!("STT SSE error for job {}: {}", job_id, err);
+                    update_job_error(&app, &job_id, &format!("SSE connection error: {}", err));
+                }
                 es.close();
                 return;
             }
@@ -379,6 +387,7 @@ pub struct TranslateSegmentEvent {
 pub async fn subscribe_to_translate_stream(app: AppHandle, job_id: String, port: u16) {
     let url = format!("http://127.0.0.1:{}/translate/stream/{}", port, job_id);
     let mut es = EventSource::get(&url);
+    let mut polling_started = false;
 
     while let Some(event) = es.next().await {
         match event {
@@ -386,6 +395,23 @@ pub async fn subscribe_to_translate_stream(app: AppHandle, job_id: String, port:
                 log::info!("Translate SSE connection opened for job {}", job_id);
             }
             Ok(Event::Message(msg)) => {
+                // Start resource polling on first message (LLM is now loaded and responsive)
+                if !polling_started {
+                    polling_started = true;
+                    let needs_polling = {
+                        let state = app.state::<SharedState>();
+                        state.lock().map(|s| s.poll_cancel.is_none()).unwrap_or(false)
+                    };
+                    if needs_polling {
+                        let token = crate::commands_runtime::start_resource_polling(app.clone(), port);
+                        let state = app.state::<SharedState>();
+                        if let Ok(mut s) = state.lock() {
+                            s.poll_cancel = Some(token);
+                        }
+                        log::info!("Resource polling started after first translate event");
+                    }
+                }
+
                 let parsed: Result<serde_json::Value, _> = serde_json::from_str(&msg.data);
                 match parsed {
                     Ok(value) => {
@@ -403,8 +429,15 @@ pub async fn subscribe_to_translate_stream(app: AppHandle, job_id: String, port:
                 }
             }
             Err(err) => {
-                log::error!("Translate SSE error for job {}: {}", job_id, err);
-                update_job_error(&app, &job_id, &format!("SSE connection error: {}", err));
+                let is_model_loading = app.try_state::<SharedState>()
+                    .and_then(|s| s.lock().ok().map(|s| s.model_loading))
+                    .unwrap_or(false);
+                if is_model_loading {
+                    log::info!("Translate SSE disconnected during model switch for job {}, ignoring", job_id);
+                } else {
+                    log::error!("Translate SSE error for job {}: {}", job_id, err);
+                    update_job_error(&app, &job_id, &format!("SSE connection error: {}", err));
+                }
                 es.close();
                 return;
             }

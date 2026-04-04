@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::config_manager;
 use crate::error::AppError;
@@ -109,6 +109,12 @@ pub async fn start_stt(
         body["end_time"] = serde_json::json!(et);
     }
 
+    // Signal model loading (suppresses health check false alarms)
+    {
+        let mut s = state.lock().map_err(|e| AppError::InvalidState(format!("Lock error: {}", e)))?;
+        s.model_loading = true;
+    }
+
     // POST /stt/start
     let client = reqwest::Client::new();
     let resp = client
@@ -143,6 +149,19 @@ pub async fn start_stt(
 
     // Emit initial job state
     let _ = app.emit("job-updated", &job);
+
+    // Clear model_loading after delay
+    {
+        let app_handle = app.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep(std::time::Duration::from_secs(60)).await;
+            if let Some(st) = app_handle.try_state::<SharedState>() {
+                if let Ok(mut s) = st.lock() {
+                    s.model_loading = false;
+                }
+            }
+        });
+    }
 
     // Spawn SSE listener for STT stream
     let app_clone = app.clone();

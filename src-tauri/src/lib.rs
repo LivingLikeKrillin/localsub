@@ -100,6 +100,7 @@ pub fn run() {
             commands::reset_setup,
             commands::start_server,
             commands::stop_server,
+            commands::restart_server,
             commands::get_server_status,
             commands::start_inference,
             commands::cancel_job,

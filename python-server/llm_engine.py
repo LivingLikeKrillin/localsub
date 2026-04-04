@@ -62,6 +62,15 @@ def load_model(model_id: str, n_gpu_layers: int | None = None) -> bool:
     if n_gpu_layers is None:
         n_gpu_layers = gpu_utils.get_llm_n_gpu_layers()
 
+    # Log VRAM before loading
+    try:
+        import torch
+        if torch.cuda.is_available():
+            free, total = torch.cuda.mem_get_info()
+            log.info("[LLM] VRAM before load: %.0f/%.0f MB free", free / 1024 / 1024, total / 1024 / 1024)
+    except ImportError:
+        pass
+
     # Try GPU first, fallback to CPU
     if n_gpu_layers != 0:
         try:
@@ -72,6 +81,13 @@ def load_model(model_id: str, n_gpu_layers: int | None = None) -> bool:
                 verbose=False,
             )
             _loaded_model_id = model_id
+            # Log VRAM after loading
+            try:
+                if torch.cuda.is_available():
+                    free, total = torch.cuda.mem_get_info()
+                    log.info("[LLM] VRAM after load: %.0f/%.0f MB free", free / 1024 / 1024, total / 1024 / 1024)
+            except Exception:
+                pass
             return True
         except Exception as e:
             log.warning("GPU load failed, falling back to CPU: %s", e)
@@ -91,6 +107,16 @@ def unload_model() -> None:
     log.info("[LLM] Unloading model: %s", _loaded_model_id)
     _model = None
     _loaded_model_id = None
+    # Force GPU memory release
+    import gc
+    gc.collect()
+    try:
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            log.info("[LLM] CUDA cache cleared")
+    except ImportError:
+        pass
 
 
 def is_model_loaded() -> bool:

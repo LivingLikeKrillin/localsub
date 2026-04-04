@@ -89,12 +89,17 @@ export function usePipeline(
         // Match STT job
         if (pipeline.sttJobId === job.id) {
           if (job.state === "RUNNING") {
+            // Ignore STT progress updates after we've moved to translation phase
+            if (pipeline.phase !== "stt") return;
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "stt",
               progress: Math.round(job.progress),
             });
           } else if (job.state === "DONE") {
+            // Ignore duplicate DONE if already past STT phase
+            if (pipeline.phase !== "stt") return;
+
             // Mark STT as 100% complete
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
@@ -176,12 +181,14 @@ export function usePipeline(
         // Match translate job
         if (pipeline.translateJobId === job.id) {
           if (job.state === "RUNNING") {
+            if (pipeline.phase === "done" || pipeline.phase === "error") return;
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "translating",
               progress: Math.round(job.progress),
             });
           } else if (job.state === "DONE") {
+            if (pipeline.phase === "done") return;
             pipeline.phase = "done";
             finalizePipeline(pipeline);
           } else if (job.state === "FAILED") {

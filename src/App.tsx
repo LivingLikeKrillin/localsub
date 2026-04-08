@@ -87,7 +87,7 @@ function App() {
   const drainQueueRef = useRef(() => {});
 
   const handleJobUpdate = useCallback(
-    (jobId: string, update: { status?: DashboardJob["status"]; stage?: DashboardJob["stage"]; progress?: number; error?: string }) => {
+    (jobId: string, update: { status?: DashboardJob["status"]; stage?: DashboardJob["stage"]; progress?: number; error?: string; duration?: number }) => {
       setDashboardJobs((prev) =>
         prev.map((j) => {
           if (j.id !== jobId) return j;

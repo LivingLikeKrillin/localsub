@@ -44,6 +44,7 @@ export interface JobUpdate {
   stage?: JobStage;
   progress?: number;
   error?: string;
+  duration?: number;
 }
 
 interface ActivePipeline {
@@ -103,15 +104,20 @@ export function usePipeline(
             // Ignore duplicate DONE if already past STT phase
             if (pipeline.phase !== "stt") return;
 
-            // Mark STT as 100% complete
+            // Clean STT output before passing to next stage
+            pipeline.segments = cleanSttSegments(pipeline.segments);
+
+            // Calculate duration from last segment
+            const lastSeg = pipeline.segments[pipeline.segments.length - 1];
+            const duration = lastSeg ? Math.ceil(lastSeg.end) : 0;
+
+            // Mark STT as 100% complete with duration
             onJobUpdate(pipeline.dashboardJobId, {
               status: "processing",
               stage: "stt",
               progress: 100,
+              duration,
             });
-
-            // Clean STT output before passing to next stage
-            pipeline.segments = cleanSttSegments(pipeline.segments);
 
             if (pipeline.enableDiarization) {
               pipeline.phase = "diarizing";

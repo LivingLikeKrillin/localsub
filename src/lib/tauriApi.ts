@@ -258,6 +258,20 @@ export async function removePreset(id: string): Promise<Preset[]> {
   return invoke("remove_preset", { id });
 }
 
+// ── ffmpeg commands ──
+
+export async function checkFfmpeg(): Promise<boolean> {
+  return invoke<boolean>("check_ffmpeg");
+}
+
+export async function getFfmpegPath(): Promise<string> {
+  return invoke<string>("get_ffmpeg_path");
+}
+
+export async function downloadFfmpeg(): Promise<string> {
+  return invoke<string>("download_ffmpeg");
+}
+
 // ── Few-shot commands ──
 
 export async function getFewShotSets(): Promise<FewShotSet[]> {

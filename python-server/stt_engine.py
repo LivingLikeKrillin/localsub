@@ -135,6 +135,16 @@ def _load_qwen3_asr(model_id: str) -> bool:
     return True
 
 
+def _find_ffmpeg() -> str:
+    """Find ffmpeg: check app-local bin first, then system PATH."""
+    # Check app-local path
+    appdata = os.environ.get("APPDATA", "")
+    local_ffmpeg = os.path.join(appdata, "LocalSub", "bin", "ffmpeg.exe")
+    if os.path.isfile(local_ffmpeg):
+        return local_ffmpeg
+    return "ffmpeg"
+
+
 def unload_model() -> None:
     global _model, _loaded_model_id, _engine_type
     log.info("[STT] Unloading model: %s", _loaded_model_id)
@@ -323,7 +333,7 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
         try:
             temp_audio_path = os.path.join(tempfile.gettempdir(), f"localsub_preview_{job_id}.wav")
             cmd = [
-                "ffmpeg", "-y",
+                _find_ffmpeg(), "-y",
                 "-ss", str(start_time),
                 "-to", str(end_time),
                 "-i", file_path,

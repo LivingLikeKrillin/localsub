@@ -10,6 +10,9 @@ import {
   cancelTranslate,
   saveJobSubtitles,
   restartServer,
+  exportSubtitles,
+  getConfig,
+  type ExportSegmentInput,
 } from "../lib/tauriApi";
 import { toastError } from "../lib/toast";
 import { cleanSttSegments } from "../lib/sttCleaner";
@@ -369,12 +372,37 @@ export function usePipeline(
   async function finalizePipeline(pipeline: ActivePipeline) {
     const lines = buildSubtitleLines(pipeline);
 
-    // Save to disk
+    // Save to disk (internal format)
     try {
       await saveJobSubtitles(pipeline.dashboardJobId, lines);
     } catch (e) {
       console.error("Failed to save subtitles:", e);
       toastError(i18n.t("toast.subtitleSaveFailed"));
+    }
+
+    // Auto-export subtitle file to output directory
+    try {
+      const config = await getConfig();
+      const segments: ExportSegmentInput[] = lines.map((line) => ({
+        index: line.index,
+        start: line.start_time,
+        end: line.end_time,
+        text: line.original_text,
+        translated: line.translated_text || undefined,
+      }));
+      // Extract filename without extension from source file path
+      const baseName = pipeline.filePath
+        .split(/[/\\]/).pop()
+        ?.replace(/\.[^.]+$/, "") ?? pipeline.dashboardJobId;
+      await exportSubtitles(
+        segments,
+        config.subtitle_format || "srt",
+        config.output_dir,
+        baseName,
+      );
+    } catch (e) {
+      console.error("Auto-export failed:", e);
+      // Non-critical — user can still export manually from editor
     }
 
     onJobUpdate(pipeline.dashboardJobId, {

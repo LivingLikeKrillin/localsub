@@ -3,6 +3,7 @@ mod commands_config;
 mod commands_csv;
 mod commands_diarization;
 mod commands_fewshot;
+mod commands_ffmpeg;
 mod commands_export;
 mod commands_job;
 mod commands_model;
@@ -157,6 +158,10 @@ pub fn run() {
             commands_vocabulary::add_vocabulary,
             commands_vocabulary::update_vocabulary,
             commands_vocabulary::remove_vocabulary,
+            // ffmpeg commands
+            commands_ffmpeg::check_ffmpeg,
+            commands_ffmpeg::get_ffmpeg_path,
+            commands_ffmpeg::download_ffmpeg,
             // CSV commands
             commands_csv::read_csv_file,
         ])

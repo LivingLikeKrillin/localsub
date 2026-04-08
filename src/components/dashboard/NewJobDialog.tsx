@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress"
 import { Upload, X, FileVideo, Eye, RefreshCw, Play, BookOpen, Plus, Trash2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Switch } from "@/components/ui/switch"
-import { pickFile } from "@/lib/tauriApi"
+import { pickFile, checkFfmpeg, downloadFfmpeg } from "@/lib/tauriApi"
 import { usePreviewPipeline } from "@/hooks/usePreviewPipeline"
 import type { Preset, Vocabulary, VocabularyEntry } from "@/types"
 
@@ -156,8 +156,29 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
   const [previewDuration, setPreviewDuration] = useState("2")
 
   const [vocabEditOpen, setVocabEditOpen] = useState(false)
+  const [ffmpegReady, setFfmpegReady] = useState<boolean | null>(null)
+  const [ffmpegDownloading, setFfmpegDownloading] = useState(false)
 
   const preview = usePreviewPipeline()
+
+  // Check ffmpeg when preview panel opens
+  useEffect(() => {
+    if (showPreview && ffmpegReady === null) {
+      checkFfmpeg().then(setFfmpegReady).catch(() => setFfmpegReady(false))
+    }
+  }, [showPreview, ffmpegReady])
+
+  const handleDownloadFfmpeg = useCallback(async () => {
+    setFfmpegDownloading(true)
+    try {
+      await downloadFfmpeg()
+      setFfmpegReady(true)
+    } catch (e) {
+      console.error("ffmpeg download failed:", e)
+    } finally {
+      setFfmpegDownloading(false)
+    }
+  }, [])
 
   const handleStartPreview = useCallback(() => {
     if (files.length === 0 || !selectedPreset) return
@@ -387,6 +408,25 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                 <Eye className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">{t("dashboard.newJob.preview.title")}</span>
               </div>
+
+              {ffmpegReady === false && (
+                <div className="flex items-center gap-2 rounded-md bg-yellow-500/10 border border-yellow-500/30 px-3 py-2 text-xs">
+                  <span className="text-yellow-600 dark:text-yellow-400 flex-1">
+                    {t("dashboard.newJob.preview.ffmpegRequired", "Sample translation requires ffmpeg for audio extraction.")}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-6 text-xs shrink-0"
+                    onClick={handleDownloadFfmpeg}
+                    disabled={ffmpegDownloading}
+                  >
+                    {ffmpegDownloading
+                      ? t("dashboard.newJob.preview.ffmpegDownloading", "Downloading...")
+                      : t("dashboard.newJob.preview.ffmpegInstall", "Auto Install")}
+                  </Button>
+                </div>
+              )}
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground shrink-0">{t("dashboard.newJob.preview.startLabel")}</span>

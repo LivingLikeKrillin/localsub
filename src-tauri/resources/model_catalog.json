@@ -127,6 +127,42 @@
       "model_category": "general"
     },
     {
+      "id": "gemma4-e4b-q4km",
+      "name": "Gemma 4 E4B Q4_K_M",
+      "repo": "unsloth/gemma-4-E4B-it-GGUF",
+      "filename": "gemma-4-E4B-it-Q4_K_M.gguf",
+      "size_bytes": 4980000000,
+      "sha256": "placeholder",
+      "quant": "Q4_K_M",
+      "profiles": ["balanced", "power"],
+      "n_gpu_layers_default": -1,
+      "model_category": "general"
+    },
+    {
+      "id": "gemma4-e4b-q8",
+      "name": "Gemma 4 E4B Q8_0",
+      "repo": "unsloth/gemma-4-E4B-it-GGUF",
+      "filename": "gemma-4-E4B-it-Q8_0.gguf",
+      "size_bytes": 8190000000,
+      "sha256": "placeholder",
+      "quant": "Q8_0",
+      "profiles": ["power"],
+      "n_gpu_layers_default": -1,
+      "model_category": "general"
+    },
+    {
+      "id": "gemma4-e2b-q4km",
+      "name": "Gemma 4 E2B Q4_K_M",
+      "repo": "unsloth/gemma-4-E2B-it-GGUF",
+      "filename": "gemma-4-E2B-it-Q4_K_M.gguf",
+      "size_bytes": 2500000000,
+      "sha256": "placeholder",
+      "quant": "Q4_K_M",
+      "profiles": ["lite", "balanced"],
+      "n_gpu_layers_default": -1,
+      "model_category": "general"
+    },
+    {
       "id": "qwen25-7b-instruct-q5km",
       "name": "Qwen2.5-7B Instruct Q5_K_M",
       "repo": "Qwen/Qwen2.5-7B-Instruct-GGUF",

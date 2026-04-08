@@ -333,9 +333,11 @@ export function DashboardPage({
                       </div>
                       <div className="min-w-0">
                         <p className="text-sm font-medium truncate">{job.file_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatSize(job.file_size)} / {formatDuration(job.duration)}
-                        </p>
+                        {job.duration > 0 && (
+                          <p className="text-xs text-muted-foreground">
+                            {formatDuration(job.duration)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </TableCell>

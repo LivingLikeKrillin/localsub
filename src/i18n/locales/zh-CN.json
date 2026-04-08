@@ -563,6 +563,13 @@
     "restoreDefaults": "恢复默认设置",
     "memoryWarning": "使用超过 80% 的可用内存可能导致不稳定。"
   },
+  "server": {
+    "running": "服务器运行中",
+    "starting": "服务器启动中...",
+    "error": "服务器错误",
+    "errorClick": "服务器错误 — 点击重启",
+    "stopped": "服务器已停止"
+  },
   "theme": {
     "light": "浅色",
     "dark": "深色",

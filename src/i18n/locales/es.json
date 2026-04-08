@@ -563,6 +563,13 @@
     "restoreDefaults": "Restaurar valores predeterminados",
     "memoryWarning": "Usar más del 80% de la RAM disponible puede causar inestabilidad."
   },
+  "server": {
+    "running": "Servidor activo",
+    "starting": "Iniciando servidor...",
+    "error": "Error del servidor",
+    "errorClick": "Error del servidor — clic para reiniciar",
+    "stopped": "Servidor detenido"
+  },
   "theme": {
     "light": "Claro",
     "dark": "Oscuro",

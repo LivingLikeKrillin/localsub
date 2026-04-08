@@ -563,6 +563,13 @@
     "restoreDefaults": "기본값 복원",
     "memoryWarning": "사용 가능한 RAM의 80% 이상을 사용하면 불안정해질 수 있습니다."
   },
+  "server": {
+    "running": "서버 실행 중",
+    "starting": "서버 시작 중...",
+    "error": "서버 오류",
+    "errorClick": "서버 오류 — 클릭하여 재시작",
+    "stopped": "서버 중지됨"
+  },
   "theme": {
     "light": "라이트",
     "dark": "다크",

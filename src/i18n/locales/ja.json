@@ -563,6 +563,13 @@
     "restoreDefaults": "デフォルトに戻す",
     "memoryWarning": "利用可能なRAMの80%以上を使用すると、動作が不安定になる場合があります。"
   },
+  "server": {
+    "running": "サーバー稼働中",
+    "starting": "サーバー起動中...",
+    "error": "サーバーエラー",
+    "errorClick": "サーバーエラー — クリックして再起動",
+    "stopped": "サーバー停止中"
+  },
   "theme": {
     "light": "ライト",
     "dark": "ダーク",

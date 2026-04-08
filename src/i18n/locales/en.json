@@ -563,6 +563,13 @@
     "restoreDefaults": "Restore Defaults",
     "memoryWarning": "Using more than 80% of available RAM may cause instability."
   },
+  "server": {
+    "running": "Server running",
+    "starting": "Starting...",
+    "error": "Server error",
+    "errorClick": "Server error — click to restart",
+    "stopped": "Server stopped"
+  },
   "theme": {
     "light": "Light",
     "dark": "Dark",

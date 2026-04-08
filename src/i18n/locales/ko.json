@@ -19,6 +19,19 @@
       "completed": "완료",
       "failed": "실패"
     },
+    "status": {
+      "pending": "대기 중",
+      "processing": "처리 중",
+      "completed": "완료",
+      "failed": "실패"
+    },
+    "stage": {
+      "stt": "음성 인식",
+      "diarizing": "화자 검출",
+      "translating": "번역 중",
+      "done": "완료",
+      "error": "오류"
+    },
     "table": {
       "file": "파일",
       "preset": "프리셋",

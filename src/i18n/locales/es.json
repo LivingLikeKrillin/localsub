@@ -19,6 +19,19 @@
       "completed": "Completado",
       "failed": "Fallido"
     },
+    "status": {
+      "pending": "Pendiente",
+      "processing": "Procesando",
+      "completed": "Completado",
+      "failed": "Fallido"
+    },
+    "stage": {
+      "stt": "STT",
+      "diarizing": "Diarización",
+      "translating": "Traduciendo",
+      "done": "Listo",
+      "error": "Error"
+    },
     "table": {
       "file": "Archivo",
       "preset": "Predefinido",

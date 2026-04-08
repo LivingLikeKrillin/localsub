@@ -19,6 +19,19 @@
       "completed": "完了",
       "failed": "失敗"
     },
+    "status": {
+      "pending": "待機中",
+      "processing": "処理中",
+      "completed": "完了",
+      "failed": "失敗"
+    },
+    "stage": {
+      "stt": "音声認識",
+      "diarizing": "話者分離",
+      "translating": "翻訳中",
+      "done": "完了",
+      "error": "エラー"
+    },
     "table": {
       "file": "ファイル",
       "preset": "プリセット",

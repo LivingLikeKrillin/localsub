@@ -66,8 +66,10 @@ function formatDuration(sec: number) {
   if (sec <= 0) return "--"
   const h = Math.floor(sec / 3600)
   const m = Math.floor((sec % 3600) / 60)
+  const s = Math.floor(sec % 60)
   if (h > 0) return `${h}h ${m}m`
-  return `${m}m`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
 }
 
 function getRelativeTime(iso: string): { key: string; count?: number } | null {

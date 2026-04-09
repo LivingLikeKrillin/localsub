@@ -9,122 +9,122 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: 0 0% 99%;
-  --foreground: 240 6% 10%;
+  --background: 240 3% 97%;
+  --foreground: 240 8% 8%;
   --card: 0 0% 100%;
-  --card-foreground: 240 6% 10%;
+  --card-foreground: 240 8% 8%;
   --popover: 0 0% 100%;
-  --popover-foreground: 240 6% 10%;
-  --primary: 250 50% 55%;
+  --popover-foreground: 240 8% 8%;
+  --primary: 252 56% 57%;
   --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 95%;
-  --secondary-foreground: 240 6% 10%;
-  --muted: 240 5% 95%;
-  --muted-foreground: 240 4% 45%;
-  --accent: 240 5% 92%;
-  --accent-foreground: 240 6% 10%;
-  --destructive: 0 55% 50%;
+  --secondary: 240 4% 93%;
+  --secondary-foreground: 240 8% 8%;
+  --muted: 240 4% 93%;
+  --muted-foreground: 240 4% 42%;
+  --accent: 240 4% 90%;
+  --accent-foreground: 240 8% 8%;
+  --destructive: 4 60% 52%;
   --destructive-foreground: 0 0% 100%;
-  --border: 240 5% 90%;
-  --input: 240 5% 90%;
-  --ring: 250 50% 55%;
+  --border: 240 4% 88%;
+  --input: 240 4% 88%;
+  --ring: 252 56% 57%;
 
-  --status-success: 152 60% 38%;
+  --status-success: 158 55% 38%;
   --status-success-foreground: 0 0% 100%;
-  --status-warning: 42 80% 48%;
-  --status-warning-foreground: 0 0% 100%;
-  --status-error: 0 55% 48%;
+  --status-warning: 40 85% 52%;
+  --status-warning-foreground: 0 0% 8%;
+  --status-error: 4 60% 52%;
   --status-error-foreground: 0 0% 100%;
-  --status-info: 250 50% 55%;
+  --status-info: 252 56% 57%;
   --status-info-foreground: 0 0% 100%;
 
-  --waveform: 250 40% 50%;
-  --waveform-bg: 240 5% 96%;
-  --playhead: 0 70% 50%;
-  --subtitle-highlight: 250 50% 55%;
-  --waveform-grid: 240 4% 85%;
-  --waveform-label: 240 4% 55%;
-  --waveform-block: 240 5% 65%;
-  --waveform-block-active: 250 35% 50%;
-  --waveform-block-border: 250 50% 50%;
-  --waveform-text: 0 0% 25%;
+  --waveform: 252 40% 52%;
+  --waveform-bg: 240 4% 95%;
+  --playhead: 4 65% 52%;
+  --subtitle-highlight: 252 50% 57%;
+  --waveform-grid: 240 3% 84%;
+  --waveform-label: 240 3% 52%;
+  --waveform-block: 240 4% 62%;
+  --waveform-block-active: 252 35% 52%;
+  --waveform-block-border: 252 50% 52%;
+  --waveform-text: 240 6% 22%;
 
-  --chart-1: 250 50% 55%;
-  --chart-2: 152 60% 38%;
-  --chart-3: 42 80% 48%;
-  --chart-4: 280 45% 55%;
-  --chart-5: 0 55% 48%;
-  --radius: 0.5rem;
+  --chart-1: 252 56% 57%;
+  --chart-2: 158 55% 38%;
+  --chart-3: 40 85% 52%;
+  --chart-4: 280 40% 55%;
+  --chart-5: 4 60% 52%;
+  --radius: 0.625rem;
 
-  --sidebar-background: 240 5% 97%;
-  --sidebar-foreground: 240 4% 30%;
-  --sidebar-primary: 250 50% 55%;
+  --sidebar-background: 240 4% 95%;
+  --sidebar-foreground: 240 4% 28%;
+  --sidebar-primary: 252 56% 57%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 93%;
-  --sidebar-accent-foreground: 240 6% 10%;
-  --sidebar-border: 240 5% 90%;
-  --sidebar-ring: 250 50% 55%;
+  --sidebar-accent: 240 4% 91%;
+  --sidebar-accent-foreground: 240 8% 8%;
+  --sidebar-border: 240 4% 88%;
+  --sidebar-ring: 252 56% 57%;
 }
 
 .dark {
-  --background: 240 6% 7%;
-  --foreground: 0 0% 90%;
-  --card: 240 6% 9%;
-  --card-foreground: 0 0% 90%;
-  --popover: 240 6% 10%;
-  --popover-foreground: 0 0% 90%;
-  --primary: 250 50% 65%;
-  --primary-foreground: 0 0% 100%;
-  --secondary: 240 5% 13%;
-  --secondary-foreground: 0 0% 90%;
-  --muted: 240 5% 13%;
-  --muted-foreground: 240 4% 50%;
-  --accent: 240 5% 15%;
-  --accent-foreground: 0 0% 90%;
-  --destructive: 0 55% 50%;
+  --background: 240 8% 5%;
+  --foreground: 240 6% 88%;
+  --card: 240 8% 7%;
+  --card-foreground: 240 6% 88%;
+  --popover: 240 8% 8%;
+  --popover-foreground: 240 6% 88%;
+  --primary: 252 62% 65%;
+  --primary-foreground: 240 8% 5%;
+  --secondary: 240 6% 11%;
+  --secondary-foreground: 240 6% 88%;
+  --muted: 240 6% 11%;
+  --muted-foreground: 240 4% 48%;
+  --accent: 240 6% 13%;
+  --accent-foreground: 240 6% 88%;
+  --destructive: 4 55% 52%;
   --destructive-foreground: 0 0% 100%;
-  --border: 240 5% 14%;
-  --input: 240 5% 14%;
-  --ring: 250 50% 65%;
+  --border: 240 6% 13%;
+  --input: 240 6% 13%;
+  --ring: 252 62% 65%;
 
-  --status-success: 152 60% 42%;
+  --status-success: 158 50% 42%;
   --status-success-foreground: 0 0% 100%;
-  --status-warning: 42 80% 55%;
-  --status-warning-foreground: 0 0% 10%;
-  --status-error: 0 55% 50%;
+  --status-warning: 40 80% 58%;
+  --status-warning-foreground: 0 0% 5%;
+  --status-error: 4 55% 52%;
   --status-error-foreground: 0 0% 100%;
-  --status-info: 250 50% 65%;
-  --status-info-foreground: 0 0% 100%;
+  --status-info: 252 62% 65%;
+  --status-info-foreground: 240 8% 5%;
 
-  --waveform: 250 40% 50%;
-  --waveform-bg: 240 6% 8%;
-  --playhead: 0 70% 55%;
-  --subtitle-highlight: 250 50% 55%;
-  --waveform-grid: 240 4% 18%;
-  --waveform-label: 240 4% 38%;
-  --waveform-block: 240 5% 28%;
-  --waveform-block-active: 250 35% 42%;
-  --waveform-block-border: 250 50% 55%;
-  --waveform-text: 0 0% 80%;
+  --waveform: 252 45% 52%;
+  --waveform-bg: 240 8% 6%;
+  --playhead: 4 65% 55%;
+  --subtitle-highlight: 252 55% 58%;
+  --waveform-grid: 240 5% 16%;
+  --waveform-label: 240 4% 36%;
+  --waveform-block: 240 5% 24%;
+  --waveform-block-active: 252 38% 42%;
+  --waveform-block-border: 252 50% 58%;
+  --waveform-text: 240 4% 78%;
 
-  --chart-1: 250 50% 65%;
-  --chart-2: 152 60% 42%;
-  --chart-3: 42 80% 55%;
-  --chart-4: 280 45% 55%;
-  --chart-5: 0 55% 50%;
+  --chart-1: 252 62% 65%;
+  --chart-2: 158 50% 42%;
+  --chart-3: 40 80% 58%;
+  --chart-4: 280 42% 58%;
+  --chart-5: 4 55% 52%;
 
-  --sidebar-background: 240 6% 8%;
-  --sidebar-foreground: 0 0% 70%;
-  --sidebar-primary: 250 50% 65%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 240 5% 13%;
-  --sidebar-accent-foreground: 0 0% 90%;
-  --sidebar-border: 240 5% 12%;
-  --sidebar-ring: 250 50% 65%;
+  --sidebar-background: 240 8% 6%;
+  --sidebar-foreground: 240 4% 65%;
+  --sidebar-primary: 252 62% 65%;
+  --sidebar-primary-foreground: 240 8% 5%;
+  --sidebar-accent: 240 6% 11%;
+  --sidebar-accent-foreground: 240 6% 88%;
+  --sidebar-border: 240 6% 10%;
+  --sidebar-ring: 252 62% 65%;
 }
 
 @theme inline {
-  --font-sans: "Inter Variable", "Pretendard", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-sans: "Pretendard", "Inter Variable", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
@@ -214,12 +214,64 @@ body {
   color: hsl(var(--foreground));
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
+}
+
+/* Subtle noise texture for depth */
+.dark body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.015;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 256px 256px;
+}
+
+/* Primary button glow in dark mode */
+.dark [data-slot="button"]:not([data-variant]) {
+  box-shadow: 0 0 12px -3px hsl(var(--primary) / 0.3);
+}
+
+/* Softer scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.35);
+}
+
+/* Card hover lift */
+.dark .group:hover {
+  transition: box-shadow 0.2s ease;
+}
+
+/* Badge refinement */
+[data-slot="badge"] {
+  letter-spacing: 0.02em;
+  font-weight: 500;
+}
+
+/* Input focus glow */
+.dark input:focus-visible,
+.dark textarea:focus-visible {
+  box-shadow: 0 0 0 1px hsl(var(--ring)), 0 0 8px -2px hsl(var(--ring) / 0.25);
 }
 
 .spinner {
   width: 20px;
   height: 20px;
-  border: 3px solid hsl(var(--border));
+  border: 2px solid hsl(var(--border));
   border-top-color: hsl(var(--primary));
   border-radius: 50%;
   animation: spin 0.8s linear infinite;

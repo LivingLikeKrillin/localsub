@@ -1,9 +1,10 @@
 <p align="center">
-  <h1 align="center">LocalSub</h1>
-  <p align="center">
-    <strong>내 영상. 내 언어. 내 컴퓨터.</strong><br/>
-    <sub>클라우드 없이, 구독 없이, 타협 없이 — 온전히 로컬에서 돌아가는 AI 자막 도구.</sub>
-  </p>
+  <img src="public/logo.png" alt="LocalSub" width="120" />
+</p>
+<h1 align="center">LocalSub</h1>
+<p align="center">
+  <strong>내 영상. 내 언어. 내 컴퓨터.</strong><br/>
+  <sub>클라우드 없이, 구독 없이, 타협 없이 — 온전히 로컬에서 돌아가는 AI 자막 도구.</sub>
 </p>
 
 <p align="center">

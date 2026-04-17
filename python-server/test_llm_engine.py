@@ -63,3 +63,44 @@ def test_fix_untranslated_vocab_with_missing_fields_skipped():
     ]
     result = _fix_untranslated("おい", "おい", vocabulary=vocab)
     assert result == "이봐"
+
+
+import prompt_builder
+
+
+def test_pivot_mode_builds_two_leg_messages_with_correct_glossaries():
+    """Pivot mode must route the source→pivot glossary to leg 1 and
+    the pivot→target glossary to leg 2. Final leg also takes recent
+    examples; first leg does not."""
+    segs = [{"start": 0.0, "end": 5.0, "text": "山本を殺せ"}]
+    pivot_glossary = [{"source": "山本", "target": "Yamamoto"}]
+    final_glossary = [{"source": "Yamamoto", "target": "야마모토"}]
+    recent = [{"source": "Kill him.", "target": "죽여버려"}]
+
+    # Leg 1: JA → EN with pivot_glossary only
+    leg1 = prompt_builder.build_messages(
+        segs, current_index=0,
+        source_lang="ja", target_lang="en",
+        glossary=pivot_glossary,
+    )
+    # system + glossary pair + user = 4 messages
+    assert len(leg1) == 4
+    assert leg1[1] == {"role": "user", "content": "山本"}
+    assert leg1[2] == {"role": "assistant", "content": "Yamamoto"}
+    assert leg1[3] == {"role": "user", "content": "山本を殺せ"}
+
+    # Leg 2: EN → KO with final_glossary + recent_examples
+    segs2 = [{"start": 0.0, "end": 5.0, "text": "Kill Yamamoto."}]
+    leg2 = prompt_builder.build_messages(
+        segs2, current_index=0,
+        source_lang="en", target_lang="ko",
+        glossary=final_glossary,
+        recent_examples=recent,
+    )
+    # system + glossary pair + recent pair + user = 6 messages
+    assert len(leg2) == 6
+    assert leg2[1] == {"role": "user", "content": "Yamamoto"}
+    assert leg2[2] == {"role": "assistant", "content": "야마모토"}
+    assert leg2[3] == {"role": "user", "content": "Kill him."}
+    assert leg2[4] == {"role": "assistant", "content": "죽여버려"}
+    assert leg2[5] == {"role": "user", "content": "Kill Yamamoto."}

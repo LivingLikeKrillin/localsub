@@ -384,6 +384,9 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     context_window = job["context_window"]
     style_preset = job["style_preset"]
     glossary = job["glossary"]
+    translation_mode = job.get("translation_mode", "direct")
+    pivot_language = job.get("pivot_language") or "en"
+    pivot_glossary = job.get("pivot_glossary", []) or []
     quality = job.get("translation_quality", "balanced")
     custom_prompt = job.get("custom_prompt")
     two_pass = job.get("two_pass", False)
@@ -457,8 +460,10 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     import time as _time
     _translate_start = _time.time()
     log.info(
-        "[TRANSLATE] Starting: %d segments, model=%s, quality=%s, context=%s",
-        total, _loaded_model_id, quality, media_context[:80] if media_context else "none",
+        "[TRANSLATE] Starting: %d segments, model=%s, quality=%s, mode=%s, pivot=%s, context=%s",
+        total, _loaded_model_id, quality, translation_mode,
+        pivot_language if translation_mode == "pivot_2pass" else "-",
+        media_context[:80] if media_context else "none",
     )
     # `two_pass` flag is currently inert; self-refinement was removed and
     # pivot 2-pass is not yet wired. Progress scales 1:1 over a single pass.
@@ -482,48 +487,136 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
             batch_indices = list(range(i, i + batch_size))
 
             if batch_size == 1:
-                # Single segment — use standard prompt + dynamic few-shot window
+                # Single segment — dispatch direct vs pivot 2-pass.
                 recent_slice = (
                     recent_buffer[-RECENT_FEW_SHOT_WINDOW:]
                     if RECENT_FEW_SHOT_WINDOW > 0 else []
                 )
-                messages = prompt_builder.build_messages(
-                    segments, i,
-                    source_lang=source_lang,
-                    target_lang=target_lang,
-                    context_window=context_window,
-                    style_preset=style_preset,
-                    glossary=glossary,
-                    translations=completed_translations,
-                    custom_prompt=custom_prompt,
-                    model_category=model_category,
-                    rolling_summary=rolling_summary,
-                    media_filename=media_filename,
-                    media_context=media_context,
-                    media_type=media_type,
-                    recent_examples=recent_slice,
-                )
 
-                # Log full prompt for debugging
-                log.debug("[TRANSLATE] seg=%d prompt_system=%s", i, messages[0]["content"][:100])
-                log.debug("[TRANSLATE] seg=%d prompt_user=%s", i, messages[1]["content"][:300])
-
-                def _infer_single(msgs=messages, samp=sampling):
-                    return _model.create_chat_completion(
-                        messages=msgs,
-                        max_tokens=512,
-                        temperature=samp["temperature"],
-                        top_p=samp["top_p"],
-                        repeat_penalty=samp["repeat_penalty"],
+                if translation_mode == "pivot_2pass":
+                    # Leg 1 — source → pivot language, pivot glossary only.
+                    leg1_msgs = prompt_builder.build_messages(
+                        segments, i,
+                        source_lang=source_lang,
+                        target_lang=pivot_language,
+                        context_window=context_window,
+                        style_preset=style_preset,
+                        glossary=pivot_glossary,
+                        translations={},  # no prior-context for pivot leg
+                        custom_prompt=custom_prompt,
+                        model_category=model_category,
+                        media_filename=media_filename,
+                        media_context=media_context,
+                        media_type=media_type,
+                        recent_examples=[],  # recent is final-leg only
                     )
 
-                response = await loop.run_in_executor(None, _infer_single)
-                translated = ""
-                raw_content = ""
-                if response and "choices" in response and len(response["choices"]) > 0:
-                    raw_content = response["choices"][0].get("message", {}).get("content") or ""
-                    translated = _postprocess(raw_content)
-                    translated = _fix_untranslated(segments[i].get("text", ""), translated, vocabulary=glossary)
+                    log.debug("[TRANSLATE] seg=%d leg1_system=%s", i, leg1_msgs[0]["content"][:100])
+                    log.debug("[TRANSLATE] seg=%d leg1_user=%s", i, leg1_msgs[-1]["content"][:300])
+
+                    def _infer_pivot(msgs=leg1_msgs, samp=sampling):
+                        return _model.create_chat_completion(
+                            messages=msgs,
+                            max_tokens=512,
+                            temperature=samp["temperature"],
+                            top_p=samp["top_p"],
+                            repeat_penalty=samp["repeat_penalty"],
+                        )
+
+                    pivot_resp = await loop.run_in_executor(None, _infer_pivot)
+                    pivot_text = ""
+                    if pivot_resp and "choices" in pivot_resp and len(pivot_resp["choices"]) > 0:
+                        pivot_raw = pivot_resp["choices"][0].get("message", {}).get("content") or ""
+                        pivot_text = _postprocess(pivot_raw)
+
+                    log.debug("[TRANSLATE] seg=%d pivot_text=%s", i, pivot_text[:150])
+
+                    if not pivot_text:
+                        # Leg 1 gave nothing — record an empty translation and move on.
+                        translated = ""
+                        raw_content = ""
+                    else:
+                        # Leg 2 — pivot language → target, final glossary + recent buffer.
+                        leg2_segments = [{
+                            "start": segments[i].get("start", 0.0),
+                            "end": segments[i].get("end", 0.0),
+                            "text": pivot_text,
+                        }]
+                        leg2_msgs = prompt_builder.build_messages(
+                            leg2_segments, 0,
+                            source_lang=pivot_language,
+                            target_lang=target_lang,
+                            context_window=context_window,
+                            style_preset=style_preset,
+                            glossary=glossary,
+                            translations={},
+                            custom_prompt=custom_prompt,
+                            model_category=model_category,
+                            media_filename=media_filename,
+                            media_context=media_context,
+                            media_type=media_type,
+                            recent_examples=recent_slice,
+                        )
+
+                        log.debug("[TRANSLATE] seg=%d leg2_user=%s", i, leg2_msgs[-1]["content"][:300])
+
+                        def _infer_final(msgs=leg2_msgs, samp=sampling):
+                            return _model.create_chat_completion(
+                                messages=msgs,
+                                max_tokens=512,
+                                temperature=samp["temperature"],
+                                top_p=samp["top_p"],
+                                repeat_penalty=samp["repeat_penalty"],
+                            )
+
+                        final_resp = await loop.run_in_executor(None, _infer_final)
+                        translated = ""
+                        raw_content = ""
+                        if final_resp and "choices" in final_resp and len(final_resp["choices"]) > 0:
+                            raw_content = final_resp["choices"][0].get("message", {}).get("content") or ""
+                            translated = _postprocess(raw_content)
+                            translated = _fix_untranslated(
+                                segments[i].get("text", ""), translated, vocabulary=glossary,
+                            )
+                else:
+                    # Direct mode — single build_messages call (unchanged logic).
+                    messages = prompt_builder.build_messages(
+                        segments, i,
+                        source_lang=source_lang,
+                        target_lang=target_lang,
+                        context_window=context_window,
+                        style_preset=style_preset,
+                        glossary=glossary,
+                        translations=completed_translations,
+                        custom_prompt=custom_prompt,
+                        model_category=model_category,
+                        rolling_summary=rolling_summary,
+                        media_filename=media_filename,
+                        media_context=media_context,
+                        media_type=media_type,
+                        recent_examples=recent_slice,
+                    )
+
+                    # Log full prompt for debugging
+                    log.debug("[TRANSLATE] seg=%d prompt_system=%s", i, messages[0]["content"][:100])
+                    log.debug("[TRANSLATE] seg=%d prompt_user=%s", i, messages[1]["content"][:300])
+
+                    def _infer_single(msgs=messages, samp=sampling):
+                        return _model.create_chat_completion(
+                            messages=msgs,
+                            max_tokens=512,
+                            temperature=samp["temperature"],
+                            top_p=samp["top_p"],
+                            repeat_penalty=samp["repeat_penalty"],
+                        )
+
+                    response = await loop.run_in_executor(None, _infer_single)
+                    translated = ""
+                    raw_content = ""
+                    if response and "choices" in response and len(response["choices"]) > 0:
+                        raw_content = response["choices"][0].get("message", {}).get("content") or ""
+                        translated = _postprocess(raw_content)
+                        translated = _fix_untranslated(segments[i].get("text", ""), translated, vocabulary=glossary)
 
                 log.debug(
                     "[TRANSLATE] seg=%d | orig=%s | raw=%s | post=%s",

@@ -13,21 +13,32 @@ from prompt_builder import (
 
 
 def test_build_system_prompt_natural():
+    # New architecture is style-agnostic at the system level; style is no longer
+    # injected as text into the prompt. Assert on what IS present: language names
+    # and translation task framing.
     prompt = build_system_prompt("natural", "en", "ko")
-    assert "naturally" in prompt.lower() or "idiomatically" in prompt.lower()
-    assert "en" in prompt
-    assert "ko" in prompt
+    assert "English" in prompt
+    assert "Korean" in prompt
+    assert "translate" in prompt.lower()
+    assert "subtitles" in prompt.lower()
 
 
 def test_build_system_prompt_formal():
+    # Style preset is accepted but no longer injected as text (style-agnostic).
+    # Verify the function accepts "formal" without error and still produces a prompt.
     prompt = build_system_prompt("formal", "en", "ko")
-    assert "formal" in prompt.lower() or "honorific" in prompt.lower()
+    assert "English" in prompt
+    assert "Korean" in prompt
+    assert "translate" in prompt.lower()
 
 
 def test_build_system_prompt_unknown_style():
+    # Unknown style is silently ignored (style-agnostic architecture).
+    # Prompt still contains language names and task framing.
     prompt = build_system_prompt("nonexistent_style", "en", "ko")
-    # Falls back to "natural"
-    assert "naturally" in prompt.lower() or "idiomatically" in prompt.lower()
+    assert "English" in prompt
+    assert "Korean" in prompt
+    assert "translate" in prompt.lower()
 
 
 # ── _format_timestamp ─────────────────────────────────────────────
@@ -117,3 +128,59 @@ def test_build_messages_structure():
     assert messages[0]["role"] == "system"
     assert messages[1]["role"] == "user"
     assert ">>>" in messages[1]["content"]
+
+
+# ── New structure: custom prompt placement and output-rule recency ──
+
+def test_build_system_prompt_has_output_rule_last_when_no_custom():
+    prompt = build_system_prompt("natural", "ja", "ko")
+    lines = [line for line in prompt.splitlines() if line.strip()]
+    # Last meaningful line is /no_think, the one before is the output rule
+    assert lines[-1].startswith("/no_think")
+    assert "output" in lines[-2].lower()
+
+
+def test_build_system_prompt_custom_placed_before_output_rule():
+    prompt = build_system_prompt(
+        "natural", "ja", "ko",
+        custom_prompt="Use Busan dialect.",
+    )
+    # Custom appears, and it appears before the output rule and /no_think
+    idx_custom = prompt.find("Use Busan dialect.")
+    idx_output = prompt.lower().find("output only")
+    idx_no_think = prompt.find("/no_think")
+    assert idx_custom != -1
+    assert idx_custom < idx_output < idx_no_think
+
+
+def test_build_system_prompt_custom_has_section_marker():
+    prompt = build_system_prompt(
+        "natural", "ja", "ko",
+        custom_prompt="Keep character names unchanged.",
+    )
+    # Section marker introduces the custom block so the model can distinguish it
+    assert "Additional instructions:" in prompt
+
+
+def test_build_system_prompt_empty_custom_omits_section():
+    prompt = build_system_prompt("natural", "ja", "ko", custom_prompt="")
+    assert "Additional instructions:" not in prompt
+
+
+def test_build_system_prompt_whitespace_only_custom_omits_section():
+    prompt = build_system_prompt("natural", "ja", "ko", custom_prompt="   \n  ")
+    assert "Additional instructions:" not in prompt
+
+
+def test_build_system_prompt_preserves_media_type():
+    prompt = build_system_prompt(
+        "natural", "ja", "ko", media_type="drama"
+    )
+    assert "drama" in prompt
+
+
+def test_build_system_prompt_no_think_only_for_general_category():
+    general = build_system_prompt("natural", "ja", "ko", model_category="general")
+    instruct = build_system_prompt("natural", "ja", "ko", model_category="instruct")
+    assert "/no_think" in general
+    assert "/no_think" not in instruct

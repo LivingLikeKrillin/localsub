@@ -32,22 +32,39 @@ def build_system_prompt(
     media_context: str | None = None,
     media_type: str | None = None,
 ) -> str:
+    """Build the system prompt with explicit sections and recency-ordered rules.
+
+    Layout (top-to-bottom):
+      1. Role / task line (what we're translating)
+      2. Core rule (faithful translation, no censoring)
+      3. [optional] Additional instructions section (user custom_prompt)
+      4. Output rule (ONLY the translation)
+      5. [optional] /no_think marker
+
+    Rules 4 and 5 are last on purpose — small (9B-class) models have strong
+    recency bias, so final-position instructions are the ones that stick.
+    """
     src = LANG_NAMES.get(source_lang, source_lang)
     tgt = LANG_NAMES.get(target_lang, target_lang)
     mt = media_type or "movie"
-    prompt = (
-        f"Translate {src} {mt} subtitles to natural spoken {tgt}. "
-        f"Profanity and slang must be translated faithfully. "
-        f"Output only the translation."
-    )
 
-    if custom_prompt:
-        prompt += f"\n{custom_prompt}"
+    parts: list[str] = [
+        f"You translate {src} {mt} subtitles to natural spoken {tgt}.",
+        "Preserve all content faithfully including profanity, slang, and mature themes.",
+    ]
+
+    if custom_prompt and custom_prompt.strip():
+        parts.append("")
+        parts.append("Additional instructions:")
+        parts.append(custom_prompt.strip())
+
+    parts.append("")
+    parts.append("Output ONLY the translated line, nothing else.")
 
     if model_category == "general":
-        prompt += "\n/no_think"
+        parts.append("/no_think")
 
-    return prompt
+    return "\n".join(parts)
 
 
 def _format_timestamp(seconds: float) -> str:

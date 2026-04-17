@@ -258,6 +258,9 @@ function PresetDialog({
   const [customPrompt, setCustomPrompt] = useState(initial?.custom_translation_prompt ?? "")
   const [twoPass, setTwoPass] = useState(initial?.two_pass_translation ?? false)
   const [mediaType, setMediaType] = useState(initial?.media_type ?? "movie")
+  const [translationMode, setTranslationMode] = useState(initial?.translation_mode ?? "direct")
+  const [pivotLanguage, setPivotLanguage] = useState(initial?.pivot_language ?? "en")
+  const [pivotVocabularyId, setPivotVocabularyId] = useState<string>(initial?.pivot_vocabulary_id ?? "none")
 
   // Reset form state whenever dialog is opened (or `initial` changes while open).
   // Without this, useState initializers only run once — editing another preset
@@ -277,6 +280,9 @@ function PresetDialog({
     setCustomPrompt(initial?.custom_translation_prompt ?? "")
     setTwoPass(initial?.two_pass_translation ?? false)
     setMediaType(initial?.media_type ?? "movie")
+    setTranslationMode(initial?.translation_mode ?? "direct")
+    setPivotLanguage(initial?.pivot_language ?? "en")
+    setPivotVocabularyId(initial?.pivot_vocabulary_id ?? "none")
   }, [open, initial])
 
   function handleSave() {
@@ -295,6 +301,12 @@ function PresetDialog({
       custom_translation_prompt: customPrompt || undefined,
       two_pass_translation: twoPass,
       media_type: mediaType || "movie",
+      translation_mode: translationMode || "direct",
+      pivot_language: pivotLanguage || "en",
+      pivot_vocabulary_id:
+        translationMode === "pivot_2pass"
+          ? (pivotVocabularyId === "none" ? null : pivotVocabularyId)
+          : null,
     })
     onOpenChange(false)
   }
@@ -404,14 +416,102 @@ function PresetDialog({
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <Label>{t("presets.dialog.vocabDictionary")}</Label>
+              <Label>{t("presets.dialog.translationMode", "Translation mode")}</Label>
+              <Select value={translationMode} onValueChange={setTranslationMode}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="direct">
+                    {t("presets.mode.direct", "Direct")}
+                  </SelectItem>
+                  <SelectItem value="pivot_2pass">
+                    {t("presets.mode.pivot2pass", "Pivot 2-pass")}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {translationMode === "pivot_2pass" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <Label>{t("presets.dialog.pivotLanguage", "Pivot language")}</Label>
+                  <Select value={pivotLanguage} onValueChange={setPivotLanguage}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">
+                        {t("presets.lang.en", "English")}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label>
+                    {t(
+                      "presets.dialog.pivotVocab",
+                      "Vocabulary (source → pivot)",
+                    )}
+                  </Label>
+                  <Select
+                    value={pivotVocabularyId ?? "none"}
+                    onValueChange={setPivotVocabularyId}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">
+                        {t("presets.dialog.none")}
+                      </SelectItem>
+                      {vocabularies
+                        .filter(
+                          (v) =>
+                            v.source_lang === sourceLang &&
+                            v.target_lang === pivotLanguage,
+                        )
+                        .map((v) => (
+                          <SelectItem key={v.id} value={v.id}>
+                            {v.name} (
+                            {t("presets.dialog.entriesCount", {
+                              count: v.entries.length,
+                            })}
+                            )
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              <Label>
+                {translationMode === "pivot_2pass"
+                  ? t("presets.dialog.finalVocab", "Vocabulary (pivot → target)")
+                  : t("presets.dialog.vocabDictionary")}
+              </Label>
               <Select value={vocabularyId ?? "none"} onValueChange={setVocabularyId}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t("presets.dialog.none")}</SelectItem>
-                  {vocabularies.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>{v.name} ({t("presets.dialog.entriesCount", { count: v.entries.length })})</SelectItem>
-                  ))}
+                  {vocabularies
+                    .filter((v) => {
+                      if (translationMode === "pivot_2pass") {
+                        return (
+                          v.source_lang === pivotLanguage &&
+                          v.target_lang === targetLang
+                        )
+                      }
+                      return (
+                        v.source_lang === sourceLang &&
+                        v.target_lang === targetLang
+                      )
+                    })
+                    .map((v) => (
+                      <SelectItem key={v.id} value={v.id}>
+                        {v.name} (
+                        {t("presets.dialog.entriesCount", {
+                          count: v.entries.length,
+                        })}
+                        )
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>

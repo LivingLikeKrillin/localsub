@@ -11,6 +11,28 @@ use crate::sse_client;
 use crate::state::{GlossaryEntry, ServerStatus, SharedState};
 use crate::vocabulary_manager;
 
+// ── Preset/config field resolution ──
+// When a preset is active, its field wins if non-empty.
+// Otherwise fall back to the equivalent config field.
+
+fn resolve_str<'a>(preset_val: Option<&'a str>, config_val: &'a str) -> &'a str {
+    match preset_val {
+        Some(s) if !s.trim().is_empty() => s,
+        _ => config_val,
+    }
+}
+
+fn resolve_opt_str(preset_val: Option<&str>, config_val: Option<&str>) -> Option<String> {
+    match preset_val {
+        Some(s) if !s.trim().is_empty() => Some(s.to_string()),
+        _ => config_val.filter(|s| !s.trim().is_empty()).map(str::to_string),
+    }
+}
+
+fn resolve_bool(preset_val: Option<bool>, config_val: Option<bool>) -> Option<bool> {
+    preset_val.or(config_val)
+}
+
 #[tauri::command]
 pub async fn start_translate(
     app: AppHandle,
@@ -121,17 +143,31 @@ pub async fn start_translate(
         }
     };
 
-    // Find a ready LLM model: prefer active_llm_model from config, fallback to first ready
+    // Find a ready LLM model: preset.llm_model wins when set and ready; else config.active_llm_model; else first ready.
     let manifest = manifest_manager::load_manifest(&config)?;
-    let llm_model_id = config
-        .active_llm_model
-        .as_deref()
+
+    // Preset.llm_model wins when set and ready; else config.active_llm_model; else first ready.
+    let preset_llm = preset
+        .as_ref()
+        .map(|p| p.llm_model.as_str())
+        .filter(|s| !s.is_empty());
+
+    let llm_model_id = preset_llm
         .and_then(|id| {
             manifest
                 .models
                 .iter()
                 .find(|m| m.id == id && m.model_type == "llm" && m.status == "ready")
                 .map(|m| m.id.clone())
+        })
+        .or_else(|| {
+            config.active_llm_model.as_deref().and_then(|id| {
+                manifest
+                    .models
+                    .iter()
+                    .find(|m| m.id == id && m.model_type == "llm" && m.status == "ready")
+                    .map(|m| m.id.clone())
+            })
         })
         .or_else(|| {
             manifest
@@ -180,13 +216,22 @@ pub async fn start_translate(
         })
         .collect();
 
+    // Resolve per-field: preset wins when set, config fills in otherwise.
+    let p_source_lang = preset.as_ref().map(|p| p.source_lang.as_str());
+    let p_target_lang = preset.as_ref().map(|p| p.target_lang.as_str());
+    let p_style = preset.as_ref().map(|p| p.translation_style.as_str());
+
+    let resolved_source_lang = resolve_str(p_source_lang, &config.source_language).to_string();
+    let resolved_target_lang = resolve_str(p_target_lang, &config.target_language).to_string();
+    let resolved_style = resolve_str(p_style, &config.style_preset).to_string();
+
     // Build request body
     let mut body = serde_json::json!({
         "segments": segment_payload,
-        "source_lang": config.source_language,
-        "target_lang": config.target_language,
+        "source_lang": resolved_source_lang,
+        "target_lang": resolved_target_lang,
         "context_window": config.context_window,
-        "style_preset": config.style_preset,
+        "style_preset": resolved_style,
         "glossary": glossary_payload,
     });
     if let Some(ref model_id) = llm_model_id {
@@ -196,16 +241,40 @@ pub async fn start_translate(
         body["n_gpu_layers"] = serde_json::json!(layers);
     }
 
-    // Translation quality settings
-    body["translation_quality"] = serde_json::json!(
-        config.translation_quality.as_deref().unwrap_or("balanced")
+    // Translation quality / custom prompt / two-pass — preset wins when set.
+    let resolved_quality = resolve_opt_str(
+        preset.as_ref().and_then(|p| p.translation_quality.as_deref()),
+        config.translation_quality.as_deref(),
+    )
+    .unwrap_or_else(|| "balanced".to_string());
+    body["translation_quality"] = serde_json::json!(resolved_quality);
+
+    let resolved_custom_prompt = resolve_opt_str(
+        preset.as_ref().and_then(|p| p.custom_translation_prompt.as_deref()),
+        config.custom_translation_prompt.as_deref(),
     );
-    if let Some(ref prompt) = config.custom_translation_prompt {
+    if let Some(ref prompt) = resolved_custom_prompt {
         body["custom_prompt"] = serde_json::json!(prompt);
     }
-    let two_pass = config.two_pass_translation
-        .unwrap_or_else(|| config.translation_quality.as_deref() == Some("best"));
-    body["two_pass"] = serde_json::json!(two_pass);
+
+    let resolved_two_pass = resolve_bool(
+        preset.as_ref().and_then(|p| p.two_pass_translation),
+        config.two_pass_translation,
+    )
+    .unwrap_or_else(|| resolved_quality == "best");
+    body["two_pass"] = serde_json::json!(resolved_two_pass);
+
+    log::info!(
+        "Translation config resolved — lang={}→{}, style={}, quality={}, two_pass={}, custom_prompt={}, llm={} (preset={})",
+        resolved_source_lang,
+        resolved_target_lang,
+        resolved_style,
+        resolved_quality,
+        resolved_two_pass,
+        if resolved_custom_prompt.is_some() { "set" } else { "none" },
+        llm_model_id.as_deref().unwrap_or("<none>"),
+        preset.as_ref().map(|p| p.name.as_str()).unwrap_or("<none>"),
+    );
     body["model_category"] = serde_json::json!(model_category);
 
     // Pass media_type from preset

@@ -12,6 +12,7 @@ import {
   Star,
   FileUp,
   Info,
+  ArrowLeftRight,
 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { Button } from "@/components/ui/button"
@@ -478,6 +479,94 @@ function PresetDialog({
   )
 }
 
+// ─── Vocabulary entries table (shared by both tabs in VocabDialog) ──
+
+function EntriesTable({
+  entries,
+  updateEntry,
+  removeEntry,
+  onToggleFallback,
+  toggleLabel,
+}: {
+  entries: VocabularyEntry[]
+  updateEntry: (id: string, field: keyof VocabularyEntry, value: string) => void
+  removeEntry: (id: string) => void
+  onToggleFallback: (id: string) => void
+  toggleLabel: string
+}) {
+  const { t } = useTranslation()
+  if (entries.length === 0) {
+    return (
+      <div className="rounded-md border border-dashed p-6 text-center text-xs text-muted-foreground">
+        {t("presets.vocab.tabs.empty", "아직 항목이 없습니다. 아래 '항목 추가' 버튼을 눌러 시작하세요.")}
+      </div>
+    )
+  }
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>{t("presets.dialog.source")}</TableHead>
+              <TableHead>{t("presets.dialog.target")}</TableHead>
+              <TableHead className="w-[40px]" />
+              <TableHead className="w-[40px]" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {entries.map((entry) => (
+              <TableRow key={entry.id}>
+                <TableCell className="p-1">
+                  <Input
+                    value={entry.source}
+                    onChange={(e) => updateEntry(entry.id, "source", e.target.value)}
+                    placeholder={t("presets.dialog.source")}
+                    className="h-8 text-sm"
+                  />
+                </TableCell>
+                <TableCell className="p-1">
+                  <Input
+                    value={entry.target}
+                    onChange={(e) => updateEntry(entry.id, "target", e.target.value)}
+                    placeholder={t("presets.dialog.target")}
+                    className="h-8 text-sm"
+                  />
+                </TableCell>
+                <TableCell className="p-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => onToggleFallback(entry.id)}
+                      >
+                        <ArrowLeftRight className="h-3.5 w-3.5" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="left">{toggleLabel}</TooltipContent>
+                  </Tooltip>
+                </TableCell>
+                <TableCell className="p-1">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    onClick={() => removeEntry(entry.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    </TooltipProvider>
+  )
+}
+
 // ─── Vocabulary Dialog ───────────────────────────────────────────
 
 function VocabDialog({
@@ -494,6 +583,7 @@ function VocabDialog({
   const [entries, setEntries] = useState<VocabularyEntry[]>(
     initial?.entries ?? [{ id: "new-1", source: "", target: "" }]
   )
+  const [activeTab, setActiveTab] = useState<"fewshot" | "fallback">("fewshot")
 
   // Reset form when dialog opens or `initial` changes (see PresetDialog above).
   useEffect(() => {
@@ -501,10 +591,22 @@ function VocabDialog({
     setName(initial?.name ?? "")
     setDescription(initial?.description ?? "")
     setEntries(initial?.entries ?? [{ id: "new-1", source: "", target: "" }])
+    setActiveTab("fewshot")
   }, [open, initial])
 
+  const fewshotEntries = entries.filter((e) => !e.fallback_only)
+  const fallbackEntries = entries.filter((e) => e.fallback_only === true)
+
   function addEntry() {
-    setEntries((prev) => [...prev, { id: `new-${Date.now()}`, source: "", target: "" }])
+    setEntries((prev) => [
+      ...prev,
+      {
+        id: `new-${Date.now()}`,
+        source: "",
+        target: "",
+        fallback_only: activeTab === "fallback",
+      },
+    ])
   }
 
   async function handleImportCsv() {
@@ -520,6 +622,7 @@ function VocabDialog({
         id: `csv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         source: row.source,
         target: row.target,
+        fallback_only: activeTab === "fallback",
       }))
       setEntries((prev) => [...prev, ...mapped])
       toastSuccess(t("presets.vocab.imported", { count: rows.length }))
@@ -534,6 +637,14 @@ function VocabDialog({
 
   function removeEntry(id: string) {
     setEntries((prev) => prev.filter((e) => e.id !== id))
+  }
+
+  function toggleFallbackOnly(id: string) {
+    setEntries((prev) =>
+      prev.map((e) =>
+        e.id === id ? { ...e, fallback_only: !e.fallback_only } : e,
+      ),
+    )
   }
 
   function handleSave() {
@@ -571,34 +682,52 @@ function VocabDialog({
             </div>
             <div className="flex flex-col gap-2">
               <Label>{t("presets.dialog.entries")}</Label>
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>{t("presets.dialog.source")}</TableHead>
-                      <TableHead>{t("presets.dialog.target")}</TableHead>
-                      <TableHead className="w-[40px]" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {entries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="p-1">
-                          <Input value={entry.source} onChange={(e) => updateEntry(entry.id, "source", e.target.value)} placeholder={t("presets.dialog.source")} className="h-8 text-sm" />
-                        </TableCell>
-                        <TableCell className="p-1">
-                          <Input value={entry.target} onChange={(e) => updateEntry(entry.id, "target", e.target.value)} placeholder={t("presets.dialog.target")} className="h-8 text-sm" />
-                        </TableCell>
-                        <TableCell className="p-1">
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => removeEntry(entry.id)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+
+              <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "fewshot" | "fallback")}>
+                <TabsList className="w-full grid grid-cols-2">
+                  <TabsTrigger value="fewshot">
+                    {t("presets.vocab.tabs.fewshot", "Few-shot 주입")}
+                    <span className="ml-1.5 text-[10px] text-muted-foreground">({fewshotEntries.length})</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="fallback">
+                    {t("presets.vocab.tabs.fallback", "후처리 치환")}
+                    <span className="ml-1.5 text-[10px] text-muted-foreground">({fallbackEntries.length})</span>
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="fewshot" className="mt-2 flex flex-col gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    {t(
+                      "presets.vocab.tabs.fewshotHint",
+                      "고유명사, 용어, 스타일 예시 문장. 매 번역마다 LLM 프롬프트에 chat turn으로 주입됩니다.",
+                    )}
+                  </p>
+                  <EntriesTable
+                    entries={fewshotEntries}
+                    updateEntry={updateEntry}
+                    removeEntry={removeEntry}
+                    onToggleFallback={toggleFallbackOnly}
+                    toggleLabel={t("presets.vocab.moveToFallback", "→ 후처리 탭으로 이동")}
+                  />
+                </TabsContent>
+
+                <TabsContent value="fallback" className="mt-2 flex flex-col gap-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    {t(
+                      "presets.vocab.tabs.fallbackHint",
+                      "LLM이 번역하지 못해 원문 그대로 반환할 때만 쓰이는 짧은 표현들. LLM 프롬프트에는 주입되지 않습니다.",
+                    )}
+                  </p>
+                  <EntriesTable
+                    entries={fallbackEntries}
+                    updateEntry={updateEntry}
+                    removeEntry={removeEntry}
+                    onToggleFallback={toggleFallbackOnly}
+                    toggleLabel={t("presets.vocab.moveToFewshot", "← Few-shot 탭으로 이동")}
+                  />
+                </TabsContent>
+              </Tabs>
+
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={addEntry}>
                   <Plus className="mr-1.5 h-3.5 w-3.5" /> {t("presets.dialog.addEntry")}

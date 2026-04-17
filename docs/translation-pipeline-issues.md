@@ -89,6 +89,7 @@ Output ONLY the translated line, nothing else.
 | E2 | ~~`build_refine_messages`가 glossary 파라미터 받지만 사용 안 함~~ | ✅ 함수 제거 (`e9badf5`) |
 | E3 | `build_batch_messages`는 glossary를 **텍스트로** 주입 (chat turn 아님) | ⚠️ 다른 메커니즘, 현재 비활성 |
 | E4 | Vocabulary 언어 메타(`source_lang/target_lang`)가 필터링에 미활용 | ✅ 해결 (`ff769c8`) — 프리셋 드롭다운이 언어쌍별 필터링 |
+| E5 | 장시간 영상 STT 처리 시 CTranslate2 native crash | ✅ 해결 (`b7a1884`) — 60분 초과 파일은 30분 청크로 분할 |
 
 ---
 
@@ -124,6 +125,7 @@ Output ONLY the translated line, nothing else.
 | G12 | Vocabulary 편집기에 Few-shot / 후처리 탭 UI 도입 | `f53dca9` |
 | G13 | Self-refinement 2-pass 코드 제거 — 같은 모델이 자기 편향을 못 고치므로 구조적 무의미 (E2 포함) | `e9badf5` |
 | G14 | Pivot 2-pass 번역 (translation_mode/pivot_language/pivot_vocabulary_id, 편집기 UI) + E4 언어쌍 필터링 | `fb2cbd1`..`ff769c8` |
+| G15 | 장시간 영상 STT chunking — `_probe_duration`, `_transcribe_range`, `_compute_chunks` 도입으로 60분+ 파일이 30분 단위로 순차 처리 | `55e184d`..`b7a1884` |
 
 ---
 

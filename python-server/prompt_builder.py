@@ -101,11 +101,17 @@ def build_messages(
     media_filename: str | None = None,
     media_context: str | None = None,
     media_type: str | None = None,
+    recent_examples: list[dict[str, str]] | None = None,
 ) -> list[dict[str, str]]:
     """Build chat messages for a single segment translation.
 
     Glossary entries are injected as chat turns — they serve as both
     term dictionary (short pairs) and few-shot style examples (sentence pairs).
+
+    `recent_examples` is a dynamic buffer of the last N successful
+    translations for this job. Injected AFTER the static glossary so the
+    model sees: static anchors first, then scene-local style cues, then
+    the segment to translate last (strongest recency signal).
     """
     msgs: list[dict[str, str]] = [
         {
@@ -125,6 +131,14 @@ def build_messages(
     for entry in (glossary or []):
         src_text = entry.get("source", "")
         tgt_text = entry.get("target", "")
+        if src_text and tgt_text:
+            msgs.append({"role": "user", "content": src_text})
+            msgs.append({"role": "assistant", "content": tgt_text})
+
+    # Inject recent translations as additional chat turns (dynamic few-shot).
+    for ex in (recent_examples or []):
+        src_text = ex.get("source", "")
+        tgt_text = ex.get("target", "")
         if src_text and tgt_text:
             msgs.append({"role": "user", "content": src_text})
             msgs.append({"role": "assistant", "content": tgt_text})

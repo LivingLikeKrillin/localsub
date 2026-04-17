@@ -143,6 +143,47 @@ def test_build_messages_glossary_injected_as_chat_turns():
     assert messages[3] == {"role": "user", "content": "AI is great"}
 
 
+def test_build_messages_recent_examples_after_glossary():
+    segs = [{"start": 10.0, "end": 15.0, "text": "Segment C"}]
+    glossary = [{"source": "A", "target": "A_target"}]
+    recent = [
+        {"source": "Segment A", "target": "Segment A target"},
+        {"source": "Segment B", "target": "Segment B target"},
+    ]
+    messages = build_messages(
+        segs, current_index=0, source_lang="en", target_lang="ko",
+        glossary=glossary, recent_examples=recent,
+    )
+    # system + glossary pair + 2 recent pairs + final user = 8 messages
+    assert len(messages) == 8
+    assert messages[0]["role"] == "system"
+    # Glossary first
+    assert messages[1] == {"role": "user", "content": "A"}
+    assert messages[2] == {"role": "assistant", "content": "A_target"}
+    # Then recent examples (ordered)
+    assert messages[3] == {"role": "user", "content": "Segment A"}
+    assert messages[4] == {"role": "assistant", "content": "Segment A target"}
+    assert messages[5] == {"role": "user", "content": "Segment B"}
+    assert messages[6] == {"role": "assistant", "content": "Segment B target"}
+    # Final query last
+    assert messages[7] == {"role": "user", "content": "Segment C"}
+
+
+def test_build_messages_recent_examples_empty_skipped():
+    segs = [{"start": 0.0, "end": 5.0, "text": "Hello"}]
+    recent = [
+        {"source": "", "target": "empty source"},
+        {"source": "only source", "target": ""},
+    ]
+    messages = build_messages(
+        segs, current_index=0, source_lang="en", target_lang="ko",
+        recent_examples=recent,
+    )
+    # Entries with missing source OR target are silently skipped
+    assert len(messages) == 2
+    assert messages[1] == {"role": "user", "content": "Hello"}
+
+
 # ── New structure: custom prompt placement and output-rule recency ──
 
 def test_build_system_prompt_has_output_rule_last_when_no_custom():

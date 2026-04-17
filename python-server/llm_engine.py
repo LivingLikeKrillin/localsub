@@ -232,6 +232,13 @@ QUALITY_SAMPLING: dict[str, dict[str, float]] = {
 
 BATCH_SIZE = 1
 
+# ── Dynamic few-shot ─────────────────────────────────────────────
+# Number of most recent successful translations to inject as additional
+# chat turns for each segment. Validated on Qwen 3.5 9B Q5_K_M via
+# test_fewshot_30_q5km.py D-variant to measurably improve style
+# consistency (scene-local tone, character voice). 0 disables.
+RECENT_FEW_SHOT_WINDOW = 3
+
 
 # ── Job management ─────────────────────────────────────────────────
 
@@ -400,6 +407,9 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     completed_translations: dict[int, str] = {}
     sampling = QUALITY_SAMPLING.get(quality, QUALITY_SAMPLING["balanced"])
     rolling_summary: str | None = None
+    # Dynamic few-shot: ring buffer of the last N successful (non-echo) translations.
+    # Injected into each segment's prompt as additional chat turns.
+    recent_buffer: list[dict[str, str]] = []
 
     # Auto-infer media context from first segments if not provided
     if not media_context and total > 0:
@@ -482,7 +492,11 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
             batch_indices = list(range(i, i + batch_size))
 
             if batch_size == 1:
-                # Single segment — use standard prompt
+                # Single segment — use standard prompt + dynamic few-shot window
+                recent_slice = (
+                    recent_buffer[-RECENT_FEW_SHOT_WINDOW:]
+                    if RECENT_FEW_SHOT_WINDOW > 0 else []
+                )
                 messages = prompt_builder.build_messages(
                     segments, i,
                     source_lang=source_lang,
@@ -497,6 +511,7 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     media_filename=media_filename,
                     media_context=media_context,
                     media_type=media_type,
+                    recent_examples=recent_slice,
                 )
 
                 # Log full prompt for debugging
@@ -539,6 +554,19 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     "translated": translated,
                 }
                 all_results.append(result_entry)
+
+                # Feed dynamic few-shot buffer. Skip echoes and empty outputs
+                # to avoid amplifying LLM failures into the next prompt.
+                orig_text = segments[i].get("text", "")
+                if (
+                    RECENT_FEW_SHOT_WINDOW > 0
+                    and translated
+                    and translated != orig_text
+                ):
+                    recent_buffer.append({"source": orig_text, "target": translated})
+                    # Cap the buffer — we only read the tail, no need to grow unbounded.
+                    if len(recent_buffer) > RECENT_FEW_SHOT_WINDOW * 4:
+                        del recent_buffer[: -RECENT_FEW_SHOT_WINDOW * 2]
 
                 yield {
                     "type": "translate_segment",

@@ -37,7 +37,7 @@
 | B2 | Vocabulary → 후처리 fallback 치환 | ❌ 미구현 (하드코딩 맵만) |
 | B3 | Vocabulary entry `strict` 플래그 | ❌ 없음 (엄격 치환 불가) |
 | B4 | Vocabulary `context`, `note` 필드 | ❌ 저장만 되고 LLM에 전달 안 됨 |
-| B5 | **Dynamic few-shot: 직전 3개 번역 chat turn 주입** — `test_fewshot_30_q5km.py`에서 D 방식으로 검증, 스타일 일관성 향상 확인됨. prompt_builder + llm_engine 루프에 recent buffer 관리 추가 필요. 기본 window=3, 프리셋 옵션으로 노출 (0=비활성) | ❌ 미구현 (검증됨) |
+| B5 | **Dynamic few-shot: 직전 3개 번역 chat turn 주입** — 검증 후 구현. `RECENT_FEW_SHOT_WINDOW=3` 상수로 현재 하드코딩, 프리셋 UI 노출은 후속 | ✅ 구현 (다음 커밋) |
 
 ---
 
@@ -121,6 +121,7 @@ Output ONLY the translated line, nothing else.
 | G6 | 시스템 프롬프트 `/no_think`을 맨 끝에 배치 (D5 연결) | `488e1a0` |
 | G7 | STT 파이프라인에 `preset.whisper_model` 라우팅 (A8) | `cef5f28` |
 | G8 | 미리보기 결과 테이블 스크롤 캡 해제 (F6), 설치된 모델 카드 색상 강조 (F7) | `21687b3` |
+| G9 | Dynamic few-shot 구현 (B5): 직전 N개 번역을 chat turn으로 주입, echo/빈 응답 제외 | (다음 커밋) |
 
 ---
 
@@ -135,7 +136,7 @@ Output ONLY the translated line, nothing else.
 
 ### 🟢 기능 확장
 - **B3, F3, F4**: strict 플래그 + UI
-- **B5**: Dynamic few-shot (직전 N개 주입) — 테스트로 효과 검증됨
+- (B5 완료됨 — 다음 커밋)
 - **E4**: Vocabulary 언어쌍 필터링
 - **F5**: 기본 Vocabulary 번들
 

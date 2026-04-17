@@ -227,10 +227,8 @@ def test_build_system_prompt_custom_placed_before_output_rule():
         custom_prompt="Use Busan dialect.",
     )
     # Custom appears, and it appears before the output rule and /no_think.
-    # Anchor on the exact canonical phrase "Output ONLY" (case-sensitive) so
-    # this test catches reorderings even if the output rule wording drifts.
     idx_custom = prompt.find("Use Busan dialect.")
-    idx_output = prompt.find("Output ONLY")
+    idx_output = prompt.find("Output only the translation")
     idx_no_think = prompt.find("/no_think")
     assert idx_custom != -1, f"custom prompt missing in: {prompt!r}"
     assert idx_output != -1, f"output rule missing in: {prompt!r}"
@@ -238,23 +236,29 @@ def test_build_system_prompt_custom_placed_before_output_rule():
     assert idx_custom < idx_output < idx_no_think
 
 
-def test_build_system_prompt_custom_has_section_marker():
+def test_build_system_prompt_custom_is_appended():
     prompt = build_system_prompt(
         "natural", "ja", "ko",
         custom_prompt="Keep character names unchanged.",
     )
-    # Section marker introduces the custom block so the model can distinguish it
-    assert "Additional instructions:" in prompt
+    # Custom prompt is inserted verbatim (no section marker in the current
+    # compact prompt format — the short single-line layout keeps the 9B
+    # model on track better than sectioned prompts).
+    assert "Keep character names unchanged." in prompt
 
 
-def test_build_system_prompt_empty_custom_omits_section():
+def test_build_system_prompt_empty_custom_omits_content():
     prompt = build_system_prompt("natural", "ja", "ko", custom_prompt="")
-    assert "Additional instructions:" not in prompt
+    # No stray extra text beyond the base engine line, task line, rules,
+    # and output rule. Compare base form against the empty-custom form.
+    base = build_system_prompt("natural", "ja", "ko")
+    assert prompt == base
 
 
-def test_build_system_prompt_whitespace_only_custom_omits_section():
+def test_build_system_prompt_whitespace_only_custom_omits_content():
     prompt = build_system_prompt("natural", "ja", "ko", custom_prompt="   \n  ")
-    assert "Additional instructions:" not in prompt
+    base = build_system_prompt("natural", "ja", "ko")
+    assert prompt == base
 
 
 def test_build_system_prompt_preserves_media_type():

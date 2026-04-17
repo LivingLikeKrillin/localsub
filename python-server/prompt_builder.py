@@ -25,47 +25,37 @@ def build_system_prompt(
     media_context: str | None = None,
     media_type: str | None = None,
 ) -> str:
-    """Build the system prompt with explicit sections and recency-ordered rules.
+    """Build the system prompt.
 
-    Layout (top-to-bottom):
-      1. Tool identity ("engine", not "professional translator") — framing
-         the model as a tool suppresses the moral-reasoning circuit that
-         otherwise triggers refusals / euphemization on mature content.
-      2. Task line (what we're translating, what language pair)
-      3. Literal-preservation rule (avoids naming sensitive categories
-         by name; explicitly listing "sexual content" / "profanity" in
-         earlier versions ironically primed the RLHF filter and
-         increased refusals on aligned models)
-      4. [optional] Additional instructions section (user custom_prompt)
-      5. Output rule (ONLY the translation)
-      6. [optional] /no_think marker
-
-    Rules 5 and 6 are last on purpose — small (9B-class) models have
-    strong recency bias, so final-position instructions are the ones
-    that stick.
+    Simple "professional translation engine" framing — tool identity
+    plus a compact rule set. Kept as a single line (plus the /no_think
+    marker) because aligned 9B models empirically follow short, dense
+    prompts better than long sectioned ones. Custom preset instructions
+    are appended after the base line so they stay close to the recency
+    position without drowning the base rules.
     """
     src = LANG_NAMES.get(source_lang, source_lang)
     tgt = LANG_NAMES.get(target_lang, target_lang)
     mt = media_type or "movie"
 
     parts: list[str] = [
-        "You are a subtitle translation engine.",
+        "You are a professional subtitle translation engine.",
         f"Translate {src} {mt} subtitles to natural spoken {tgt}.",
-        "Translate every line literally, preserving the original register without modification.",
+        "Profanity and slang must be translated faithfully.",
     ]
 
     if custom_prompt and custom_prompt.strip():
-        parts.append("")
-        parts.append("Additional instructions:")
         parts.append(custom_prompt.strip())
 
-    parts.append("")
-    parts.append("Output ONLY the translated line, nothing else.")
+    # Output rule is always last — recency keeps it effective.
+    parts.append("Output only the translation.")
+
+    prompt = " ".join(parts)
 
     if model_category == "general":
-        parts.append("/no_think")
+        prompt += "\n/no_think"
 
-    return "\n".join(parts)
+    return prompt
 
 
 def _format_timestamp(seconds: float) -> str:

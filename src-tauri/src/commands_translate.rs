@@ -259,12 +259,75 @@ pub async fn start_translate(
     // `translation_mode` field in a follow-up plan.
     body["two_pass"] = serde_json::json!(false);
 
+    // ── Pivot 2-pass resolution ─────────────────────────────────
+    // translation_mode is a string so we can add more modes later
+    // ("pivot_2pass_mt", "dual_model", …) without another migration.
+    let resolved_mode = preset
+        .as_ref()
+        .and_then(|p| p.translation_mode.clone())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "direct".to_string());
+    body["translation_mode"] = serde_json::json!(resolved_mode);
+
+    let resolved_pivot_language = preset
+        .as_ref()
+        .and_then(|p| p.pivot_language.clone())
+        .filter(|s| !s.trim().is_empty())
+        .unwrap_or_else(|| "en".to_string());
+
+    // Load pivot vocabulary only when pivot mode is active and a vocab is set.
+    let pivot_glossary: Vec<GlossaryEntry> = if resolved_mode == "pivot_2pass" {
+        let pivot_id = preset.as_ref().and_then(|p| p.pivot_vocabulary_id.clone());
+        match pivot_id {
+            Some(id) if !id.trim().is_empty() => {
+                match vocabulary_manager::load_vocabularies() {
+                    Ok(vocabs) => {
+                        if let Some(v) = vocabs.into_iter().find(|v| v.id == id) {
+                            log::info!(
+                                "Loaded pivot vocabulary '{}' ({} entries)",
+                                v.name, v.entries.len()
+                            );
+                            v.entries
+                                .into_iter()
+                                .map(|e| GlossaryEntry {
+                                    source: e.source,
+                                    target: e.target,
+                                })
+                                .collect()
+                        } else {
+                            log::warn!("Pivot vocabulary id '{}' not found", id);
+                            vec![]
+                        }
+                    }
+                    Err(e) => {
+                        log::warn!("Failed to list vocabularies for pivot: {}", e);
+                        vec![]
+                    }
+                }
+            }
+            _ => vec![],
+        }
+    } else {
+        vec![]
+    };
+
+    let pivot_glossary_payload: Vec<serde_json::Value> = pivot_glossary
+        .iter()
+        .map(|g| serde_json::json!({ "source": g.source, "target": g.target }))
+        .collect();
+
+    body["pivot_language"] = serde_json::json!(resolved_pivot_language);
+    body["pivot_glossary"] = serde_json::json!(pivot_glossary_payload);
+
     log::info!(
-        "Translation config resolved — lang={}→{}, style={}, quality={}, custom_prompt={}, llm={} (preset={})",
+        "Translation config resolved — lang={}→{}, style={}, quality={}, mode={}, pivot_lang={}, pivot_vocab_entries={}, custom_prompt={}, llm={} (preset={})",
         resolved_source_lang,
         resolved_target_lang,
         resolved_style,
         resolved_quality,
+        resolved_mode,
+        if resolved_mode == "pivot_2pass" { resolved_pivot_language.as_str() } else { "-" },
+        pivot_glossary.len(),
         if resolved_custom_prompt.is_some() { "set" } else { "none" },
         llm_model_id.as_deref().unwrap_or("<none>"),
         preset.as_ref().map(|p| p.name.as_str()).unwrap_or("<none>"),

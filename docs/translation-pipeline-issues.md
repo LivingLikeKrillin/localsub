@@ -104,8 +104,8 @@ Output ONLY the translated line, nothing else.
 | F3 | `_JA_FALLBACK_MAP` 내용이 UI에 노출 안 됨 | ❌ |
 | F4 | Vocabulary entry `strict` 속성 편집 UI (B3 연결) | ❌ (필요시) |
 | F5 | 기본 Vocabulary 미제공 — 신규 설치 시 빈 상태 | ⚠️ |
-| F6 | 미리보기 결과 테이블이 **5~6줄만 표시** (ScrollArea `max-h-48` 하드캡) — 내부적으로는 전체 처리되지만 표시 잘림 | ❌ |
-| F7 | 설정 > 모델에서 설치 상태 구분이 **뱃지 1개로만** 표시됨 — 카드 배경/테두리 색상으로 설치된 모델을 한눈에 구분되게 | ❌ |
+| F6 | 미리보기 결과 테이블이 **5~6줄만 표시** (ScrollArea `max-h-48` 하드캡) — 내부적으로는 전체 처리되지만 표시 잘림 | ✅ 수정 (다음 커밋) |
+| F7 | 설정 > 모델에서 설치 상태 구분이 **뱃지 1개로만** 표시됨 — 카드 배경/테두리 색상으로 설치된 모델을 한눈에 구분되게 | ✅ 수정 (다음 커밋) |
 
 ---
 
@@ -120,6 +120,7 @@ Output ONLY the translated line, nothing else.
 | G5 | 프리셋 필드 번역 파이프라인 반영 (A1–A7): source/target_lang, style, quality, custom_prompt, two_pass, llm_model | `2105ec1` |
 | G6 | 시스템 프롬프트 `/no_think`을 맨 끝에 배치 (D5 연결) | `488e1a0` |
 | G7 | STT 파이프라인에 `preset.whisper_model` 라우팅 (A8) | `cef5f28` |
+| G8 | 미리보기 결과 테이블 스크롤 캡 해제 (F6), 설치된 모델 카드 색상 강조 (F7) | (다음 커밋) |
 
 ---
 

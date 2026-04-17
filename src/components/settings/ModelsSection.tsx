@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Progress } from "@/components/ui/progress"
+import { cn } from "@/lib/utils"
 import type {
   ModelManifestEntry,
   ModelCatalog,
@@ -253,7 +254,12 @@ export function ModelsSection({
             return (
               <div
                 key={entry.id}
-                className="flex flex-col rounded-lg border p-3 transition-colors hover:bg-muted/30"
+                className={cn(
+                  "flex flex-col rounded-lg border p-3 transition-colors",
+                  status === "ready"
+                    ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                    : "hover:bg-muted/30",
+                )}
               >
                 <div className="flex items-center gap-3">
                   {canActivate && (
@@ -309,7 +315,12 @@ export function ModelsSection({
             return (
               <div
                 key={entry.id}
-                className="flex flex-col rounded-lg border p-3 transition-colors hover:bg-muted/30"
+                className={cn(
+                  "flex flex-col rounded-lg border p-3 transition-colors",
+                  status === "ready"
+                    ? "border-primary/40 bg-primary/5 hover:bg-primary/10"
+                    : "hover:bg-muted/30",
+                )}
               >
                 <div className="flex items-center gap-3">
                   {canActivate && (

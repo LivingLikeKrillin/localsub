@@ -482,9 +482,9 @@ export function NewJobDialog({ open, onOpenChange, presets, vocabularies, onSubm
                 <p className="text-xs text-destructive">{preview.error}</p>
               )}
 
-              {/* Results table */}
+              {/* Results table — max-h scales with viewport so long previews scroll nicely instead of getting clipped to ~5 rows */}
               {preview.results.length > 0 && (
-                <ScrollArea className="max-h-48">
+                <ScrollArea className="max-h-[50vh] min-h-48 flex-1">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-xs text-muted-foreground">

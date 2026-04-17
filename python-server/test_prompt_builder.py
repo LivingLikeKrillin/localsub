@@ -84,38 +84,35 @@ def _make_segments(n: int = 5):
     ]
 
 
-def test_build_user_prompt_with_context():
+def test_build_user_prompt_returns_current_segment_text():
     segs = _make_segments(5)
     prompt = build_user_prompt(segs, current_index=2, context_window=2, glossary=[])
-    assert ">>>" in prompt
-    assert "Segment 2" in prompt
-    # Context window=2 means segments 0..4 visible
-    assert "Segment 0" in prompt
-    assert "Segment 4" in prompt
+    # After refactor, build_user_prompt returns bare segment text only
+    # (9B models perform better without prior-context injection).
+    # Context/glossary injection now happens via chat turns in build_messages.
+    assert prompt == "Segment 2"
 
 
-def test_build_user_prompt_with_glossary():
+def test_build_user_prompt_ignores_glossary_arg():
     segs = [{"start": 0.0, "end": 5.0, "text": "AI is great"}]
     glossary = [{"source": "AI", "target": "인공지능"}]
     prompt = build_user_prompt(segs, current_index=0, context_window=2, glossary=glossary)
-    assert "[Glossary]" in prompt
-    assert "AI" in prompt
-    assert "인공지능" in prompt
+    # Glossary is now injected as chat turns in build_messages, not as text here
+    assert prompt == "AI is great"
 
 
-def test_build_user_prompt_first_segment():
+def test_build_user_prompt_first_segment_returns_its_text():
     segs = _make_segments(5)
     prompt = build_user_prompt(segs, current_index=0, context_window=2, glossary=[])
-    assert ">>> " in prompt
-    assert "Segment 0" in prompt
-    # start is max(0, 0-2)=0, so no negative index
-    assert "[Context]" in prompt
+    assert prompt == "Segment 0"
 
 
 def test_build_user_prompt_no_glossary_section_when_empty():
     segs = _make_segments(3)
     prompt = build_user_prompt(segs, current_index=1, context_window=1, glossary=[])
+    # Never contains section markers — plain text only
     assert "[Glossary]" not in prompt
+    assert "[Context]" not in prompt
 
 
 # ── build_messages ────────────────────────────────────────────────
@@ -127,7 +124,23 @@ def test_build_messages_structure():
     assert len(messages) == 2
     assert messages[0]["role"] == "system"
     assert messages[1]["role"] == "user"
-    assert ">>>" in messages[1]["content"]
+    # Last user message is the bare segment text (no markers)
+    assert messages[1]["content"] == "Hello"
+
+
+def test_build_messages_glossary_injected_as_chat_turns():
+    segs = [{"start": 0.0, "end": 5.0, "text": "AI is great"}]
+    glossary = [{"source": "AI", "target": "인공지능"}]
+    messages = build_messages(
+        segs, current_index=0, source_lang="en", target_lang="ko",
+        glossary=glossary,
+    )
+    # system + (user/assistant pair for glossary entry) + final user = 4 messages
+    assert len(messages) == 4
+    assert messages[0]["role"] == "system"
+    assert messages[1] == {"role": "user", "content": "AI"}
+    assert messages[2] == {"role": "assistant", "content": "인공지능"}
+    assert messages[3] == {"role": "user", "content": "AI is great"}
 
 
 # ── New structure: custom prompt placement and output-rule recency ──
@@ -145,11 +158,15 @@ def test_build_system_prompt_custom_placed_before_output_rule():
         "natural", "ja", "ko",
         custom_prompt="Use Busan dialect.",
     )
-    # Custom appears, and it appears before the output rule and /no_think
+    # Custom appears, and it appears before the output rule and /no_think.
+    # Anchor on the exact canonical phrase "Output ONLY" (case-sensitive) so
+    # this test catches reorderings even if the output rule wording drifts.
     idx_custom = prompt.find("Use Busan dialect.")
-    idx_output = prompt.lower().find("output only")
+    idx_output = prompt.find("Output ONLY")
     idx_no_think = prompt.find("/no_think")
-    assert idx_custom != -1
+    assert idx_custom != -1, f"custom prompt missing in: {prompt!r}"
+    assert idx_output != -1, f"output rule missing in: {prompt!r}"
+    assert idx_no_think != -1, f"/no_think missing in: {prompt!r}"
     assert idx_custom < idx_output < idx_no_think
 
 

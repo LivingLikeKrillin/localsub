@@ -146,7 +146,6 @@ pub async fn start_translate(
     // Find a ready LLM model: preset.llm_model wins when set and ready; else config.active_llm_model; else first ready.
     let manifest = manifest_manager::load_manifest(&config)?;
 
-    // Preset.llm_model wins when set and ready; else config.active_llm_model; else first ready.
     let preset_llm = preset
         .as_ref()
         .map(|p| p.llm_model.as_str())
@@ -285,21 +284,10 @@ pub async fn start_translate(
     }
 
 
-    // Pass media filename for context-aware translation
-    // Extract from any active job that has a file path
-    {
-        let s = state.lock().map_err(|e| {
-            AppError::InvalidState(format!("Lock error: {}", e))
-        })?;
-        // Find any job with a file path to extract filename
-        if let Some(job) = s.jobs.values().next() {
-            if let Some(ref msg) = job.message {
-                // message sometimes contains file info; use config fallback
-            }
-        }
-    }
-    // Use source_language as a hint; the actual filename will be passed from frontend in future
-    // For now, leave media_filename out — the system prompt improvement alone helps
+    // Note: media_filename is not currently forwarded to Python. The system
+    // prompt improvements already deliver most of the filename-context benefit,
+    // and passing the real filename will require frontend plumbing. Revisit
+    // when A8 (whisper_model routing) lands — same plumbing pattern.
 
     // POST /translate/start
     let client = reqwest::Client::new();

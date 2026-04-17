@@ -8,13 +8,6 @@ Glossary entries serve as both term dictionary and few-shot style examples.
 import re
 from typing import Any
 
-STYLE_PROMPTS = {
-    "natural": "Translate naturally and idiomatically. Paraphrasing is OK.",
-    "formal": "Use formal/honorific language.",
-    "literal": "Translate literally, preserving sentence structure.",
-    "preserve_slang": "Preserve slang, profanity without censoring.",
-}
-
 LANG_NAMES = {
     "ko": "Korean", "en": "English", "ja": "Japanese",
     "zh": "Chinese", "es": "Spanish", "fr": "French",

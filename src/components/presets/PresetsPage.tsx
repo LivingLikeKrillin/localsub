@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   Plus,
   Pencil,
@@ -245,6 +245,26 @@ function PresetDialog({
   const [twoPass, setTwoPass] = useState(initial?.two_pass_translation ?? false)
   const [mediaType, setMediaType] = useState(initial?.media_type ?? "movie")
 
+  // Reset form state whenever dialog is opened (or `initial` changes while open).
+  // Without this, useState initializers only run once — editing another preset
+  // would keep the previous form values and the Save button would stay disabled.
+  useEffect(() => {
+    if (!open) return
+    setName(initial?.name ?? "")
+    setDescription(initial?.description ?? "")
+    setWhisperModel(initial?.whisper_model ?? "large-v3")
+    setSourceLang(initial?.source_lang ?? "ko")
+    setTargetLang(initial?.target_lang ?? "en")
+    setOutputFormat(initial?.output_format ?? "srt")
+    setTranslationStyle(initial?.translation_style ?? "formal")
+    setLlmModel(initial?.llm_model ?? "qwen3-7b")
+    setVocabularyId(initial?.vocabulary_id ?? "none")
+    setTranslationQuality(initial?.translation_quality ?? "balanced")
+    setCustomPrompt(initial?.custom_translation_prompt ?? "")
+    setTwoPass(initial?.two_pass_translation ?? false)
+    setMediaType(initial?.media_type ?? "movie")
+  }, [open, initial])
+
   function handleSave() {
     if (!name.trim()) return
     onSave({
@@ -474,6 +494,14 @@ function VocabDialog({
   const [entries, setEntries] = useState<VocabularyEntry[]>(
     initial?.entries ?? [{ id: "new-1", source: "", target: "" }]
   )
+
+  // Reset form when dialog opens or `initial` changes (see PresetDialog above).
+  useEffect(() => {
+    if (!open) return
+    setName(initial?.name ?? "")
+    setDescription(initial?.description ?? "")
+    setEntries(initial?.entries ?? [{ id: "new-1", source: "", target: "" }])
+  }, [open, initial])
 
   function addEntry() {
     setEntries((prev) => [...prev, { id: `new-${Date.now()}`, source: "", target: "" }])

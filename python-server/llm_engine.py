@@ -203,21 +203,40 @@ _JA_FALLBACK_MAP = {
 }
 
 
-def _fix_untranslated(original: str, translated: str) -> str:
-    """If the translation is identical to the original (untranslated), try fallback map."""
+def _fix_untranslated(
+    original: str,
+    translated: str,
+    vocabulary: list[dict[str, str]] | None = None,
+) -> str:
+    """If the translation is empty or identical to the original,
+    substitute from the user's vocabulary, then fall back to the
+    built-in map. Otherwise return `translated` unchanged.
+
+    Vocabulary entries must have non-empty `source` AND `target`.
+    Match is exact on the trimmed source string.
+    """
     stripped_orig = original.strip()
     stripped_trans = translated.strip()
 
-    # Check if translation is just the original Japanese text
-    if stripped_trans == stripped_orig or not stripped_trans:
-        # Try exact match in fallback map
-        if stripped_orig in _JA_FALLBACK_MAP:
-            return _JA_FALLBACK_MAP[stripped_orig]
+    # Only intervene on echoes / empty outputs
+    if stripped_trans and stripped_trans != stripped_orig:
+        return translated
 
-        # Try case-insensitive / partial match
-        for ja, ko in _JA_FALLBACK_MAP.items():
-            if stripped_orig.lower() == ja.lower():
-                return ko
+    # 1. User-managed vocabulary (authoritative)
+    for entry in (vocabulary or []):
+        entry_src = (entry.get("source") or "").strip()
+        entry_tgt = (entry.get("target") or "").strip()
+        if not entry_src or not entry_tgt:
+            continue
+        if entry_src == stripped_orig:
+            return entry_tgt
+
+    # 2. Legacy built-in map (removed in a later task once the default
+    #    vocabulary ships with new installs; kept here as a transitional
+    #    safety net so translations running in parallel with Task 1 still
+    #    resolve echoes for the Japanese phrases we used to hardcode).
+    if stripped_orig in _JA_FALLBACK_MAP:
+        return _JA_FALLBACK_MAP[stripped_orig]
 
     return translated
 

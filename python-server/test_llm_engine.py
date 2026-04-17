@@ -21,12 +21,12 @@ def test_fix_untranslated_vocabulary_exact_match_only():
     assert result == "ヤバい"
 
 
-def test_fix_untranslated_falls_back_to_hardcoded_when_vocab_miss():
-    # With no vocabulary, the function should still handle the known
-    # Japanese fallbacks so behaviour is backwards-compatible with
-    # translations issued before the default vocabulary was installed.
+def test_fix_untranslated_no_vocab_no_change():
+    # With no vocabulary and no hardcoded map (removed now that the
+    # default vocabulary ships with the app), an echoed input passes
+    # through unchanged.
     result = _fix_untranslated("おい", "おい")
-    assert result == "야"
+    assert result == "おい"
 
 
 def test_fix_untranslated_non_echo_passes_through():

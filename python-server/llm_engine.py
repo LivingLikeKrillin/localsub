@@ -176,41 +176,14 @@ def _postprocess(raw: str) -> str:
     return text
 
 
-# Common short Japanese expressions that LLMs often fail to translate
-_JA_FALLBACK_MAP = {
-    "おい": "야",
-    "ねえ": "있잖아",
-    "うん": "응",
-    "ええ": "네",
-    "はい": "네",
-    "いいえ": "아니요",
-    "なに": "뭐",
-    "何": "뭐",
-    "えっ": "엥",
-    "えー": "에이",
-    "うそ": "거짓말",
-    "まじ": "진짜",
-    "やだ": "싫어",
-    "くそ": "젠장",
-    "クソ": "젠장",
-    "ちくしょう": "젠장",
-    "畜生": "젠장",
-    "バカ": "바보",
-    "馬鹿": "바보",
-    "すげー": "대박",
-    "やばい": "큰일이다",
-    "サイコー": "최고",
-}
-
-
 def _fix_untranslated(
     original: str,
     translated: str,
     vocabulary: list[dict[str, str]] | None = None,
 ) -> str:
     """If the translation is empty or identical to the original,
-    substitute from the user's vocabulary, then fall back to the
-    built-in map. Otherwise return `translated` unchanged.
+    substitute from the supplied vocabulary. Otherwise return
+    `translated` unchanged.
 
     Vocabulary entries must have non-empty `source` AND `target`.
     Match is exact on the trimmed source string.
@@ -218,11 +191,9 @@ def _fix_untranslated(
     stripped_orig = original.strip()
     stripped_trans = translated.strip()
 
-    # Only intervene on echoes / empty outputs
     if stripped_trans and stripped_trans != stripped_orig:
         return translated
 
-    # 1. User-managed vocabulary (authoritative)
     for entry in (vocabulary or []):
         entry_src = (entry.get("source") or "").strip()
         entry_tgt = (entry.get("target") or "").strip()
@@ -230,13 +201,6 @@ def _fix_untranslated(
             continue
         if entry_src == stripped_orig:
             return entry_tgt
-
-    # 2. Legacy built-in map (removed in a later task once the default
-    #    vocabulary ships with new installs; kept here as a transitional
-    #    safety net so translations running in parallel with Task 1 still
-    #    resolve echoes for the Japanese phrases we used to hardcode).
-    if stripped_orig in _JA_FALLBACK_MAP:
-        return _JA_FALLBACK_MAP[stripped_orig]
 
     return translated
 

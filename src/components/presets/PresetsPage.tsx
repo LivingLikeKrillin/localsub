@@ -39,7 +39,6 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Switch } from "@/components/ui/switch"
 import {
   Select,
   SelectContent,
@@ -149,9 +148,6 @@ function PresetCard({
         {preset.translation_quality && (
           <span>Quality: <span className="text-foreground font-medium">{t(`presets.quality.${preset.translation_quality}`, preset.translation_quality)}</span></span>
         )}
-        {preset.two_pass_translation && (
-          <Badge variant="outline" className="text-[10px]">{t("presets.twoPass")}</Badge>
-        )}
         {vocabName && (
           <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-1.5 py-0.5">
             <BookOpen className="h-3 w-3 text-primary" />
@@ -256,7 +252,6 @@ function PresetDialog({
   const [vocabularyId, setVocabularyId] = useState(initial?.vocabulary_id ?? "none")
   const [translationQuality, setTranslationQuality] = useState(initial?.translation_quality ?? "balanced")
   const [customPrompt, setCustomPrompt] = useState(initial?.custom_translation_prompt ?? "")
-  const [twoPass, setTwoPass] = useState(initial?.two_pass_translation ?? false)
   const [mediaType, setMediaType] = useState(initial?.media_type ?? "movie")
   const [translationMode, setTranslationMode] = useState(initial?.translation_mode ?? "direct")
   const [pivotLanguage, setPivotLanguage] = useState(initial?.pivot_language ?? "en")
@@ -278,7 +273,6 @@ function PresetDialog({
     setVocabularyId(initial?.vocabulary_id ?? "none")
     setTranslationQuality(initial?.translation_quality ?? "balanced")
     setCustomPrompt(initial?.custom_translation_prompt ?? "")
-    setTwoPass(initial?.two_pass_translation ?? false)
     setMediaType(initial?.media_type ?? "movie")
     setTranslationMode(initial?.translation_mode ?? "direct")
     setPivotLanguage(initial?.pivot_language ?? "en")
@@ -299,7 +293,7 @@ function PresetDialog({
       vocabulary_id: vocabularyId === "none" ? null : vocabularyId,
       translation_quality: translationQuality,
       custom_translation_prompt: customPrompt || undefined,
-      two_pass_translation: twoPass,
+      two_pass_translation: initial?.two_pass_translation ?? false,
       media_type: mediaType || "movie",
       translation_mode: translationMode || "direct",
       pivot_language: pivotLanguage || "en",
@@ -533,24 +527,7 @@ function PresetDialog({
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-1.5">
-                <Label>{t("presets.twoPass", "2-Pass Refinement")}</Label>
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[260px]">
-                      <p>1차 번역 후 자연스러운 표현으로 다듬는 2단계 번역. 품질은 올라가지만 시간이 2배 걸립니다.</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <Switch checked={twoPass} onCheckedChange={setTwoPass} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
+<div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
                 <Label>Media Type</Label>
                 <TooltipProvider delayDuration={200}>
@@ -693,6 +670,8 @@ function VocabDialog({
   const { t } = useTranslation()
   const [name, setName] = useState(initial?.name ?? "")
   const [description, setDescription] = useState(initial?.description ?? "")
+  const [sourceLang, setSourceLang] = useState(initial?.source_lang ?? "ja")
+  const [targetLang, setTargetLang] = useState(initial?.target_lang ?? "ko")
   const [entries, setEntries] = useState<VocabularyEntry[]>(
     initial?.entries ?? [{ id: "new-1", source: "", target: "" }]
   )
@@ -703,6 +682,8 @@ function VocabDialog({
     if (!open) return
     setName(initial?.name ?? "")
     setDescription(initial?.description ?? "")
+    setSourceLang(initial?.source_lang ?? "ja")
+    setTargetLang(initial?.target_lang ?? "ko")
     setEntries(initial?.entries ?? [{ id: "new-1", source: "", target: "" }])
     setActiveTab("fewshot")
   }, [open, initial])
@@ -766,8 +747,8 @@ function VocabDialog({
     onSave({
       name: name.trim(),
       description: description.trim(),
-      source_lang: initial?.source_lang ?? "",
-      target_lang: initial?.target_lang ?? "",
+      source_lang: sourceLang,
+      target_lang: targetLang,
       entries: validEntries,
     })
     onOpenChange(false)
@@ -791,6 +772,30 @@ function VocabDialog({
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="vocab-desc">{t("presets.dialog.description")}</Label>
                 <Input id="vocab-desc" value={description} onChange={(e) => setDescription(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>{t("presets.dialog.sourceLang")}</Label>
+                <Select value={sourceLang} onValueChange={setSourceLang}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LANG_KEYS.map((k) => (
+                      <SelectItem key={k} value={k}>{t(`presets.lang.${k}`, k)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>{t("presets.dialog.targetLang")}</Label>
+                <Select value={targetLang} onValueChange={setTargetLang}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {LANG_KEYS.map((k) => (
+                      <SelectItem key={k} value={k}>{t(`presets.lang.${k}`, k)}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="flex flex-col gap-2">

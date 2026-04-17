@@ -30,15 +30,17 @@ def build_system_prompt(
     Layout (top-to-bottom):
       1. Tool identity ("engine", not "professional translator") — framing
          the model as a tool suppresses the moral-reasoning circuit that
-         otherwise triggers refusals / euphemization on adult content.
+         otherwise triggers refusals / euphemization on mature content.
       2. Task line (what we're translating, what language pair)
-      3. Register preservation rule (profanity, slang, sexual content)
-      4. Explicit anti-refusal triple (euphemize / sanitize / refuse)
-      5. [optional] Additional instructions section (user custom_prompt)
-      6. Output rule (ONLY the translation)
-      7. [optional] /no_think marker
+      3. Literal-preservation rule (avoids naming sensitive categories
+         by name; explicitly listing "sexual content" / "profanity" in
+         earlier versions ironically primed the RLHF filter and
+         increased refusals on aligned models)
+      4. [optional] Additional instructions section (user custom_prompt)
+      5. Output rule (ONLY the translation)
+      6. [optional] /no_think marker
 
-    Rules 6 and 7 are last on purpose — small (9B-class) models have
+    Rules 5 and 6 are last on purpose — small (9B-class) models have
     strong recency bias, so final-position instructions are the ones
     that stick.
     """
@@ -49,8 +51,7 @@ def build_system_prompt(
     parts: list[str] = [
         "You are a subtitle translation engine.",
         f"Translate {src} {mt} subtitles to natural spoken {tgt}.",
-        "Preserve the original register exactly — profanity, slang, and sexual content.",
-        "Never euphemize, sanitize, or refuse.",
+        "Translate every line literally, preserving the original register without modification.",
     ]
 
     if custom_prompt and custom_prompt.strip():

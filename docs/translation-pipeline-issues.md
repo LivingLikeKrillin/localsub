@@ -34,7 +34,7 @@
 | # | 항목 | 상태 |
 |---|---|---|
 | B1 | Vocabulary → LLM 입력 chat turn 주입 | ✅ 작동 (`d693acd`) |
-| B2 | Vocabulary → 후처리 fallback 치환 | ❌ 미구현 (하드코딩 맵만) |
+| B2 | Vocabulary → 후처리 fallback 치환 | ✅ 구현 (`f9c9cd2`) |
 | B3 | Vocabulary entry `strict` 플래그 | ❌ 없음 (엄격 치환 불가) |
 | B4 | Vocabulary `context`, `note` 필드 | ❌ 저장만 되고 LLM에 전달 안 됨 |
 | B5 | **Dynamic few-shot: 직전 3개 번역 chat turn 주입** — 검증 후 구현. `RECENT_FEW_SHOT_WINDOW=3` 상수로 현재 하드코딩, 프리셋 UI 노출은 후속 | ✅ 구현 (`37f66a8`) |
@@ -45,14 +45,11 @@
 
 | # | 항목 | 상태 |
 |---|---|---|
-| C1 | `_JA_FALLBACK_MAP` 하드코딩 (22개) | ❌ 사용자 관리 불가 |
-| C2 | 일본어→한국어 전용 (다른 언어쌍 없음) | ❌ |
-| C3 | 완전 일치에만 fallback 작동 (부분/변형형 불가) | ❌ |
-| C4 | Vocabulary 기반 후처리 치환 없음 (B2 중복) | ❌ |
-| C5 | 용어 일관성 검증 없음 (LLM이 사전 무시해도 감지 못함) | ❌ |
-
-**해결 방향**: `_JA_FALLBACK_MAP` 삭제 → 기본 Vocabulary (`Japanese Common Expressions`)로 이전 →
-후처리에서 현재 Vocabulary 조회해 치환.
+| C1 | `_JA_FALLBACK_MAP` 하드코딩 (22개) | ✅ 해결 (`4618e99`) — 기본 Vocabulary로 이전 |
+| C2 | 일본어→한국어 전용 (다른 언어쌍 없음) | ✅ 해결 (`ab685a9`) — lookup은 언어 독립 |
+| C3 | 완전 일치에만 fallback 작동 (부분/변형형 불가) | ❌ (deferred — 실데이터 확보 후 결정) |
+| C4 | Vocabulary 기반 후처리 치환 없음 (B2 중복) | ✅ 해결 (`ab685a9`) |
+| C5 | 용어 일관성 검증 없음 (LLM이 사전 무시해도 감지 못함) | ❌ (deferred) |
 
 ---
 
@@ -103,7 +100,7 @@ Output ONLY the translated line, nothing else.
 | F2 | Save 버튼 비활성화 (F1 연결) | ✅ 수정 |
 | F3 | `_JA_FALLBACK_MAP` 내용이 UI에 노출 안 됨 | ❌ |
 | F4 | Vocabulary entry `strict` 속성 편집 UI (B3 연결) | ❌ (필요시) |
-| F5 | 기본 Vocabulary 미제공 — 신규 설치 시 빈 상태 | ⚠️ |
+| F5 | 기본 Vocabulary 미제공 — 신규 설치 시 빈 상태 | ✅ 해결 (`965d59a`) — 시작 시 자동 설치 |
 | F6 | 미리보기 결과 테이블이 **5~6줄만 표시** (ScrollArea `max-h-48` 하드캡) — 내부적으로는 전체 처리되지만 표시 잘림 | ✅ 수정 (`21687b3`) |
 | F7 | 설정 > 모델에서 설치 상태 구분이 **뱃지 1개로만** 표시됨 — 카드 배경/테두리 색상으로 설치된 모델을 한눈에 구분되게 | ✅ 수정 (`21687b3`) |
 
@@ -122,6 +119,7 @@ Output ONLY the translated line, nothing else.
 | G7 | STT 파이프라인에 `preset.whisper_model` 라우팅 (A8) | `cef5f28` |
 | G8 | 미리보기 결과 테이블 스크롤 캡 해제 (F6), 설치된 모델 카드 색상 강조 (F7) | `21687b3` |
 | G9 | Dynamic few-shot 구현 (B5): 직전 N개 번역을 chat turn으로 주입, echo/빈 응답 제외 | `37f66a8` |
+| G10 | Vocabulary 기반 후처리 + 기본 JA Vocabulary 번들 (B2, C1, C2, C4, F5) | `feea5d8`..`4618e99` |
 
 ---
 
@@ -131,14 +129,15 @@ Output ONLY the translated line, nothing else.
 - (A1~A8 모두 해결됨 — 남은 버그 없음)
 
 ### 🟡 품질 영향 (은근한 문제)
-- **B2, C1~C5**: 후처리 치환 (용어 일관성)
+- **C3, C5**: 부분 매칭 / 일관성 감사 (deferred — 실사용 데이터 쌓인 뒤 재검토)
+- (B2, C1, C2, C4 완료됨 — `feea5d8..4618e99`)
 - (D1~D5는 `488e1a0`에서 해결됨)
 
 ### 🟢 기능 확장
 - **B3, F3, F4**: strict 플래그 + UI
 - (B5 완료됨 — `37f66a8`)
 - **E4**: Vocabulary 언어쌍 필터링
-- **F5**: 기본 Vocabulary 번들
+- (F5 완료됨 — `965d59a`)
 
 ### ⚪ 청소 / 기술 부채
 - **E1**: 레거시 `active_glossary` 시스템 제거

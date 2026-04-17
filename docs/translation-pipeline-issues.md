@@ -19,7 +19,7 @@
 | A5 | `custom_translation_prompt` | ✅ preset 우선, config fallback (`2105ec1`) | preset 우선 |
 | A6 | `two_pass_translation` | ✅ preset 우선, config fallback (`2105ec1`) | preset 우선 |
 | A7 | `llm_model` | ✅ preset 우선, config fallback (`2105ec1`) | preset 우선 |
-| A8 | `whisper_model` | ✅ preset 우선, config fallback (커밋 뒤에 채움) | preset 우선 |
+| A8 | `whisper_model` | ✅ preset 우선, config fallback (`cef5f28`) | preset 우선 |
 | A9 | `media_type` | ✅ preset 사용 | 정상 |
 | A10 | `vocabulary_id` | ✅ preset 사용 (`d693acd` 에서 수정) | 정상 |
 
@@ -119,6 +119,7 @@ Output ONLY the translated line, nothing else.
 | G4 | 프롬프트 구조 재설계 (D1–D5): 섹션 기반 배치, recency 우선, `Additional instructions:` 구분자 | `488e1a0` |
 | G5 | 프리셋 필드 번역 파이프라인 반영 (A1–A7): source/target_lang, style, quality, custom_prompt, two_pass, llm_model | `2105ec1` |
 | G6 | 시스템 프롬프트 `/no_think`을 맨 끝에 배치 (D5 연결) | `488e1a0` |
+| G7 | STT 파이프라인에 `preset.whisper_model` 라우팅 (A8) | `cef5f28` |
 
 ---
 

@@ -165,7 +165,17 @@ function PresetCard({
 
 // ─── Vocabulary Card ─────────────────────────────────────────────
 
-function VocabCard({ vocab, onEdit, onDelete }: { vocab: Vocabulary; onEdit: () => void; onDelete: () => void }) {
+function VocabCard({
+  vocab,
+  onEdit,
+  onDuplicate,
+  onDelete,
+}: {
+  vocab: Vocabulary
+  onEdit: () => void
+  onDuplicate: () => void
+  onDelete: () => void
+}) {
   const { t } = useTranslation()
   const [expanded, setExpanded] = useState(false)
 
@@ -209,6 +219,9 @@ function VocabCard({ vocab, onEdit, onDelete }: { vocab: Vocabulary; onEdit: () 
           </Table>
           <div className="flex items-center justify-end gap-2 p-3 border-t">
             <Button variant="outline" size="sm" onClick={onEdit}><Pencil className="mr-1.5 h-3.5 w-3.5" /> {t("presets.actions.edit")}</Button>
+            <Button variant="outline" size="sm" onClick={onDuplicate}>
+              <Copy className="mr-1.5 h-3.5 w-3.5" /> {t("presets.actions.duplicate")}
+            </Button>
             <Button variant="outline" size="sm" onClick={onDelete} className="text-destructive hover:text-destructive">
               <Trash2 className="mr-1.5 h-3.5 w-3.5" /> {t("presets.actions.delete")}
             </Button>
@@ -785,6 +798,23 @@ export function PresetsPage({
     onAddPreset({ ...p, id: crypto.randomUUID(), name: `${p.name} (Copy)`, is_default: false, created_at: now, updated_at: now })
   }
 
+  function handleDuplicateVocab(v: Vocabulary) {
+    const now = new Date().toISOString()
+    // Deep-copy entries with fresh IDs so editing the duplicate doesn't mutate the original.
+    const clonedEntries: VocabularyEntry[] = v.entries.map((e) => ({
+      ...e,
+      id: crypto.randomUUID(),
+    }))
+    onAddVocabulary({
+      ...v,
+      id: crypto.randomUUID(),
+      name: `${v.name} (Copy)`,
+      entries: clonedEntries,
+      created_at: now,
+      updated_at: now,
+    })
+  }
+
   function handleSetDefault(presetId: string) {
     const now = new Date().toISOString()
     for (const p of presets) {
@@ -885,7 +915,13 @@ export function PresetsPage({
           </div>
           <div className="flex flex-1 flex-col gap-2">
             {vocabularies.map((v) => (
-              <VocabCard key={v.id} vocab={v} onEdit={() => openEditVocab(v)} onDelete={() => setDeleteTarget({ type: "vocab", id: v.id, name: v.name })} />
+              <VocabCard
+                key={v.id}
+                vocab={v}
+                onEdit={() => openEditVocab(v)}
+                onDuplicate={() => handleDuplicateVocab(v)}
+                onDelete={() => setDeleteTarget({ type: "vocab", id: v.id, name: v.name })}
+              />
             ))}
             {vocabularies.length === 0 && (
               <div className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">

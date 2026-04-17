@@ -120,6 +120,7 @@ Output ONLY the translated line, nothing else.
 | G8 | 미리보기 결과 테이블 스크롤 캡 해제 (F6), 설치된 모델 카드 색상 강조 (F7) | `21687b3` |
 | G9 | Dynamic few-shot 구현 (B5): 직전 N개 번역을 chat turn으로 주입, echo/빈 응답 제외 | `37f66a8` |
 | G10 | Vocabulary 기반 후처리 + 기본 JA Vocabulary 번들 (B2, C1, C2, C4, F5) | `feea5d8`..`4618e99` |
+| G11 | Per-entry `fallback_only` 플래그 — LLM 입력과 후처리 역할 구분 | `1a1507c` |
 
 ---
 

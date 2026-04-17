@@ -46,7 +46,8 @@
       "resources/python-embed/*": "python-embed/",
       "resources/get-pip.py": "get-pip.py",
       "resources/python-server/*": "python-server/",
-      "resources/model_catalog.json": "model_catalog.json"
+      "resources/model_catalog.json": "model_catalog.json",
+      "resources/default_vocabularies/*": "default_vocabularies/"
     }
   }
 }

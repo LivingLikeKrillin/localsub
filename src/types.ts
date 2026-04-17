@@ -173,6 +173,14 @@ export interface VocabularyEntry {
   target: string;
   context?: string;
   note?: string;
+  /**
+   * When true, this entry is consulted ONLY by post-processing
+   * (`_fix_untranslated` echo-resolution) and is not injected into
+   * the LLM prompt as a few-shot chat turn. Useful for short
+   * interjection fallbacks that don't help the model but still need
+   * to be caught when it echoes the source.
+   */
+  fallback_only?: boolean;
 }
 
 export interface Vocabulary {

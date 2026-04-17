@@ -279,6 +279,13 @@ pub struct VocabularyEntry {
     pub target: String,
     pub context: Option<String>,
     pub note: Option<String>,
+    /// When true, this entry is consulted ONLY by post-processing
+    /// (`_fix_untranslated` echo-resolution) and is not injected
+    /// into the LLM prompt as a few-shot chat turn. Useful for short
+    /// interjections / fallback pairs that don't help the model but
+    /// still need to be caught when the model echoes the source.
+    #[serde(default)]
+    pub fallback_only: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

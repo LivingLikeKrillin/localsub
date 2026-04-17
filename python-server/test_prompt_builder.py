@@ -169,6 +169,33 @@ def test_build_messages_recent_examples_after_glossary():
     assert messages[7] == {"role": "user", "content": "Segment C"}
 
 
+def test_build_messages_fallback_only_entries_skipped_from_llm_input():
+    segs = [{"start": 0.0, "end": 5.0, "text": "Test"}]
+    glossary = [
+        {"source": "山本", "target": "야마모토"},                       # normal, injected
+        {"source": "おい", "target": "야", "fallback_only": True},      # skipped
+        {"source": "シャモト", "target": "샤모토", "fallback_only": False},  # explicit false, injected
+    ]
+    messages = build_messages(
+        segs, current_index=0, source_lang="ja", target_lang="ko",
+        glossary=glossary,
+    )
+    # system + 2 injected pairs + final user = 6 messages.
+    # The "おい" fallback-only pair must NOT appear as its own chat turn.
+    assert len(messages) == 6
+    # Non-system message contents only (to avoid false positives against the system prompt).
+    turn_contents = [m["content"] for m in messages[1:]]
+    # Injected pair sources/targets are present as dedicated messages
+    assert "山本" in turn_contents
+    assert "야마모토" in turn_contents
+    assert "シャモト" in turn_contents
+    assert "샤모토" in turn_contents
+    # Fallback-only pair must not have generated its own messages
+    assert "おい" not in turn_contents
+    # Final user query
+    assert "Test" in turn_contents
+
+
 def test_build_messages_recent_examples_empty_skipped():
     segs = [{"start": 0.0, "end": 5.0, "text": "Hello"}]
     recent = [

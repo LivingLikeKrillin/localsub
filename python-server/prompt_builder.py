@@ -127,8 +127,13 @@ def build_messages(
         },
     ]
 
-    # Inject glossary entries as chat turns (dual role: term dict + few-shot)
+    # Inject glossary entries as chat turns (dual role: term dict + few-shot).
+    # Entries marked `fallback_only` are skipped here — they only exist to
+    # catch LLM echoes in post-processing (see _fix_untranslated) and would
+    # only burn context tokens if injected as few-shot.
     for entry in (glossary or []):
+        if entry.get("fallback_only", False):
+            continue
         src_text = entry.get("source", "")
         tgt_text = entry.get("target", "")
         if src_text and tgt_text:

@@ -376,6 +376,16 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
             ),
             condition_on_previous_text=False,
             no_speech_threshold=0.3,
+            # Disable Whisper's temperature-fallback ladder. By default
+            # faster-whisper retries at temperatures (0.0, 0.2, 0.4, 0.6,
+            # 0.8, 1.0) when the first-pass output triggers the
+            # compression_ratio or no_speech heuristics. On long audio +
+            # Kotoba-Whisper v2 (int8-stored) this retry path crashes
+            # CTranslate2 natively on Windows — no Python exception,
+            # server process just dies. Single-temperature run avoids
+            # the crashy code path; the tradeoff is that occasional
+            # "suspicious" segments aren't re-sampled.
+            temperature=0.0,
         ),
     )
 

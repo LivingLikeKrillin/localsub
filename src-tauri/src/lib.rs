@@ -90,6 +90,13 @@ pub fn run() {
                 let icon = tauri::image::Image::new_owned(rgba.into_raw(), w, h);
                 let _ = window.set_icon(icon);
             }
+
+            // Seed any bundled default vocabularies that aren't installed yet.
+            // Runs on every launch but is idempotent: existing IDs are skipped.
+            if let Err(e) = vocabulary_manager::ensure_default_vocabularies(&app.handle()) {
+                log::warn!("Failed to seed default vocabularies: {}", e);
+            }
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

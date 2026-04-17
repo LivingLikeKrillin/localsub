@@ -9,6 +9,7 @@ use crate::manifest_manager;
 use crate::preset_manager;
 use crate::sse_client;
 use crate::state::{GlossaryEntry, ServerStatus, SharedState};
+use crate::vocabulary_manager;
 
 #[tauri::command]
 pub async fn start_translate(
@@ -64,15 +65,61 @@ pub async fn start_translate(
     // Note: Server restart for VRAM cleanup is handled by frontend (usePipeline)
     // Frontend stops server, starts fresh, then calls startTranslate
 
-    // Load glossary
-    let glossary: Vec<GlossaryEntry> =
+    // Load glossary: prefer preset.vocabulary_id (new system), fall back to legacy active_glossary.
+    let glossary: Vec<GlossaryEntry> = if let Some(ref p) = preset {
+        if let Some(ref vocab_id) = p.vocabulary_id {
+            match vocabulary_manager::load_vocabularies() {
+                Ok(vocabs) => {
+                    if let Some(vocab) = vocabs.into_iter().find(|v| v.id == *vocab_id) {
+                        log::info!(
+                            "Loaded vocabulary '{}' ({} entries) from preset '{}'",
+                            vocab.name,
+                            vocab.entries.len(),
+                            p.name
+                        );
+                        vocab
+                            .entries
+                            .into_iter()
+                            .map(|e| GlossaryEntry {
+                                source: e.source,
+                                target: e.target,
+                            })
+                            .collect()
+                    } else {
+                        log::warn!("Vocabulary id '{}' not found (preset '{}')", vocab_id, p.name);
+                        vec![]
+                    }
+                }
+                Err(e) => {
+                    log::warn!("Failed to list vocabularies: {}", e);
+                    vec![]
+                }
+            }
+        } else {
+            // Preset selected but no vocabulary attached — nothing to inject.
+            vec![]
+        }
+    } else {
+        // No preset — fall back to legacy single-glossary config.
         match config_manager::load_glossary(&config.active_glossary) {
-            Ok(g) => g,
+            Ok(g) => {
+                log::info!(
+                    "Loaded legacy glossary '{}' ({} entries)",
+                    config.active_glossary,
+                    g.len()
+                );
+                g
+            }
             Err(e) => {
-                log::warn!("Failed to load glossary '{}': {}", config.active_glossary, e);
+                log::warn!(
+                    "Failed to load legacy glossary '{}': {}",
+                    config.active_glossary,
+                    e
+                );
                 vec![]
             }
-        };
+        }
+    };
 
     // Find a ready LLM model: prefer active_llm_model from config, fallback to first ready
     let manifest = manifest_manager::load_manifest(&config)?;

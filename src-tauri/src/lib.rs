@@ -2,7 +2,6 @@ mod commands;
 mod commands_config;
 mod commands_csv;
 mod commands_diarization;
-mod commands_fewshot;
 mod commands_ffmpeg;
 mod commands_export;
 mod commands_job;
@@ -17,7 +16,6 @@ mod commands_wizard;
 mod config_manager;
 mod csv_reader;
 mod contracts;
-mod fewshot_manager;
 mod error;
 mod hw_detector;
 mod job;
@@ -148,11 +146,6 @@ pub fn run() {
             // Dashboard job commands
             commands_job::load_dashboard_jobs,
             commands_job::save_dashboard_jobs,
-            // Few-shot commands
-            commands_fewshot::get_fewshot_sets,
-            commands_fewshot::add_fewshot_set,
-            commands_fewshot::update_fewshot_set,
-            commands_fewshot::remove_fewshot_set,
             // Vocabulary commands
             commands_vocabulary::get_vocabularies,
             commands_vocabulary::add_vocabulary,

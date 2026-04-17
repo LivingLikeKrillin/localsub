@@ -15,7 +15,6 @@ import type {
   RuntimeStatus,
   Preset,
   Vocabulary,
-  FewShotSet,
   SubtitleLine,
   DashboardJob,
 } from "../types";
@@ -270,24 +269,6 @@ export async function getFfmpegPath(): Promise<string> {
 
 export async function downloadFfmpeg(): Promise<string> {
   return invoke<string>("download_ffmpeg");
-}
-
-// ── Few-shot commands ──
-
-export async function getFewShotSets(): Promise<FewShotSet[]> {
-  return invoke("get_fewshot_sets");
-}
-
-export async function addFewShotSet(set: FewShotSet): Promise<FewShotSet[]> {
-  return invoke("add_fewshot_set", { set });
-}
-
-export async function updateFewShotSet(set: FewShotSet): Promise<FewShotSet[]> {
-  return invoke("update_fewshot_set", { set });
-}
-
-export async function removeFewShotSet(id: string): Promise<FewShotSet[]> {
-  return invoke("remove_fewshot_set", { id });
 }
 
 // ── Vocabulary commands ──

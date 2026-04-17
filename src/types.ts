@@ -203,23 +203,6 @@ export interface Preset {
   two_pass_translation?: boolean;
   enable_diarization?: boolean;
   media_type?: string;
-  few_shot_set_id?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-// ── Few-shot types ──
-
-export interface FewShotEntry {
-  source: string;
-  target: string;
-}
-
-export interface FewShotSet {
-  id: string;
-  name: string;
-  description: string;
-  entries: FewShotEntry[];
   created_at: string;
   updated_at: string;
 }

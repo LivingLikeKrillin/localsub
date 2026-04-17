@@ -266,7 +266,6 @@ def create_translate_job(
     media_filename: str | None = None,
     media_context: str | None = None,
     media_type: str | None = None,
-    few_shot_examples: list[dict] | None = None,
 ) -> str:
     job_id = str(uuid.uuid4())
     _translate_jobs[job_id] = {
@@ -286,7 +285,6 @@ def create_translate_job(
         "media_filename": media_filename,
         "media_context": media_context,
         "media_type": media_type,
-        "few_shot_examples": few_shot_examples or [],
         "state": TranslateJobState.QUEUED,
         "cancel_flag": False,
     }
@@ -397,7 +395,6 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     media_filename = job.get("media_filename")
     media_context = job.get("media_context")
     media_type = job.get("media_type")
-    few_shot_examples = job.get("few_shot_examples", [])
     total = len(segments)
     all_results: list[dict[str, Any]] = []
     completed_translations: dict[int, str] = {}
@@ -500,7 +497,6 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                     media_filename=media_filename,
                     media_context=media_context,
                     media_type=media_type,
-                    few_shot_examples=few_shot_examples,
                 )
 
                 # Log full prompt for debugging

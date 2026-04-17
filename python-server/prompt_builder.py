@@ -1,7 +1,8 @@
 """Prompt builder for LLM subtitle translation.
 
-Constructs system and user prompts with context window, glossary injection,
-translation memory, rolling summary, and style presets for segment-by-segment translation.
+Constructs system and user prompts with glossary injection (as chat turns),
+rolling summary, and style presets for segment-by-segment translation.
+Glossary entries serve as both term dictionary and few-shot style examples.
 """
 
 import re
@@ -90,9 +91,12 @@ def build_messages(
     media_filename: str | None = None,
     media_context: str | None = None,
     media_type: str | None = None,
-    few_shot_examples: list[dict[str, str]] | None = None,
 ) -> list[dict[str, str]]:
-    """Build chat messages for a single segment translation."""
+    """Build chat messages for a single segment translation.
+
+    Glossary entries are injected as chat turns — they serve as both
+    term dictionary (short pairs) and few-shot style examples (sentence pairs).
+    """
     msgs: list[dict[str, str]] = [
         {
             "role": "system",
@@ -107,18 +111,10 @@ def build_messages(
         },
     ]
 
-    # Inject glossary entries as few-shot chat turns
+    # Inject glossary entries as chat turns (dual role: term dict + few-shot)
     for entry in (glossary or []):
         src_text = entry.get("source", "")
         tgt_text = entry.get("target", "")
-        if src_text and tgt_text:
-            msgs.append({"role": "user", "content": src_text})
-            msgs.append({"role": "assistant", "content": tgt_text})
-
-    # Inject additional few-shot examples as chat turns
-    for ex in (few_shot_examples or []):
-        src_text = ex.get("source", "")
-        tgt_text = ex.get("target", "")
         if src_text and tgt_text:
             msgs.append({"role": "user", "content": src_text})
             msgs.append({"role": "assistant", "content": tgt_text})

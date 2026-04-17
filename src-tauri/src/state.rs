@@ -270,24 +270,6 @@ pub struct ResourceUsage {
     pub vram_total_mb: Option<f64>,
 }
 
-// ── Few-shot types ──
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FewShotEntry {
-    pub source: String,
-    pub target: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FewShotSet {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub entries: Vec<FewShotEntry>,
-    pub created_at: String,
-    pub updated_at: String,
-}
-
 // ── Preset types ──
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -335,8 +317,6 @@ pub struct Preset {
     pub enable_diarization: Option<bool>,
     #[serde(default)]
     pub media_type: Option<String>,
-    #[serde(default)]
-    pub few_shot_set_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

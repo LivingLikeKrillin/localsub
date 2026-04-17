@@ -28,22 +28,29 @@ def build_system_prompt(
     """Build the system prompt with explicit sections and recency-ordered rules.
 
     Layout (top-to-bottom):
-      1. Role / task line (what we're translating)
-      2. Core rule (faithful translation, no censoring)
-      3. [optional] Additional instructions section (user custom_prompt)
-      4. Output rule (ONLY the translation)
-      5. [optional] /no_think marker
+      1. Tool identity ("engine", not "professional translator") — framing
+         the model as a tool suppresses the moral-reasoning circuit that
+         otherwise triggers refusals / euphemization on adult content.
+      2. Task line (what we're translating, what language pair)
+      3. Register preservation rule (profanity, slang, sexual content)
+      4. Explicit anti-refusal triple (euphemize / sanitize / refuse)
+      5. [optional] Additional instructions section (user custom_prompt)
+      6. Output rule (ONLY the translation)
+      7. [optional] /no_think marker
 
-    Rules 4 and 5 are last on purpose — small (9B-class) models have strong
-    recency bias, so final-position instructions are the ones that stick.
+    Rules 6 and 7 are last on purpose — small (9B-class) models have
+    strong recency bias, so final-position instructions are the ones
+    that stick.
     """
     src = LANG_NAMES.get(source_lang, source_lang)
     tgt = LANG_NAMES.get(target_lang, target_lang)
     mt = media_type or "movie"
 
     parts: list[str] = [
-        f"You translate {src} {mt} subtitles to natural spoken {tgt}.",
-        "Preserve all content faithfully including profanity, slang, and mature themes.",
+        "You are a subtitle translation engine.",
+        f"Translate {src} {mt} subtitles to natural spoken {tgt}.",
+        "Preserve the original register exactly — profanity, slang, and sexual content.",
+        "Never euphemize, sanitize, or refuse.",
     ]
 
     if custom_prompt and custom_prompt.strip():

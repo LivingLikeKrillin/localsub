@@ -287,7 +287,11 @@ function App() {
             end: l.end_time,
             text: l.original_text,
           }));
-          retryTranslation(jobId, segments);
+          // Pass the job's preset_id so the retry picks up the current
+          // preset on disk — lets users change translation_mode
+          // (e.g. direct → pivot_2pass) and re-run translation without
+          // redoing STT.
+          retryTranslation(jobId, segments, job.preset_id);
           return;
         }
       } catch {

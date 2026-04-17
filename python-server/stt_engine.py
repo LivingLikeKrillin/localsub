@@ -7,6 +7,7 @@ Engine type is determined by model_id prefix.
 import asyncio
 import json
 import logging
+import math
 import os
 import subprocess
 import tempfile
@@ -23,6 +24,15 @@ except ImportError:
 import gpu_utils
 
 log = logging.getLogger(__name__)
+
+# ── Long-file chunking ───────────────────────────────────────────
+# CTranslate2 on Windows crashes natively when faster-whisper processes
+# very long post-VAD audio (reported around 1.5 h on Qwen3.5/Kotoba).
+# Above LONG_FILE_THRESHOLD_S we split the file into CHUNK_DURATION_S
+# slices and feed them one at a time. Temperature=0.0 and
+# compute_type="default" from prior commits stay in effect per-chunk.
+LONG_FILE_THRESHOLD_S = 60 * 60   # 3600s — single-pass for ≤60 min
+CHUNK_DURATION_S = 30 * 60        # 1800s — 30-min chunks when splitting
 
 # ── Model singleton ────────────────────────────────────────────────
 
@@ -352,57 +362,81 @@ async def run_stt(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
         _auto_purge_jobs()
 
 
-async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any], None]:
-    """Run transcription with faster-whisper engine."""
-    import time as _time
-    _stt_start = _time.time()
+async def _transcribe_range(
+    job_id: str,
+    job: dict,
+    source_file: str,
+    language_arg: str | None,
+    range_start: float | None,
+    range_end: float | None,
+    time_offset: float,
+    progress_base: float,
+    progress_span: float,
+    index_base: int,
+    duration_hint: float,
+) -> AsyncGenerator[dict[str, Any], None]:
+    """Run a single faster-whisper transcription pass, optionally on a
+    time slice of `source_file`.
 
-    file_path = job["file_path"]
-    language = job.get("language")
-    lang_arg = language if language and language != "auto" else None
-    start_time = job.get("start_time")
-    end_time = job.get("end_time")
-    time_offset = 0.0
-    temp_audio_path = None
+    Yields stt_segment + stt_progress events exactly like the old
+    single-shot path. The caller yields the final `done` event.
 
-    # Extract segment with ffmpeg if time range specified
-    if start_time is not None and end_time is not None:
-        time_offset = start_time
+    progress_base / progress_span map the 0..1 fraction of THIS pass
+    onto the overall progress scale (base=0 span=100 for single-pass).
+    time_offset is added to every segment start/end so timestamps
+    reflect the ORIGINAL file timeline. index_base is added to the
+    per-chunk counter so indices stay monotonic across chunks.
+
+    Final yield (type="_range_complete") carries the list of yielded
+    segments and their count so the orchestrator can accumulate. That
+    event is internal — the orchestrator strips it before re-yielding.
+    """
+    loop = asyncio.get_running_loop()
+    temp_audio_path: str | None = None
+    transcribe_file = source_file
+
+    # Extract slice if requested
+    if range_start is not None and range_end is not None:
         try:
-            temp_audio_path = os.path.join(tempfile.gettempdir(), f"localsub_preview_{job_id}.wav")
+            temp_audio_path = os.path.join(
+                tempfile.gettempdir(),
+                f"localsub_chunk_{job_id}_{int(range_start)}_{int(range_end)}.wav",
+            )
             cmd = [
                 _find_ffmpeg(), "-y",
-                "-ss", str(start_time),
-                "-to", str(end_time),
-                "-i", file_path,
+                "-ss", str(range_start),
+                "-to", str(range_end),
+                "-i", source_file,
                 "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le",
                 temp_audio_path,
             ]
-            log.info("[STT] Extracting audio segment: %s -> %s (%.1fs~%.1fs)", file_path, temp_audio_path, start_time, end_time)
-            result = subprocess.run(cmd, capture_output=True, timeout=60)
+            log.info(
+                "[STT] Extracting audio segment: %s -> %s (%.1fs~%.1fs)",
+                source_file, temp_audio_path, range_start, range_end,
+            )
+            result = subprocess.run(cmd, capture_output=True, timeout=120)
             if result.returncode != 0:
-                log.warning("[STT] ffmpeg failed (rc=%d), falling back to full file", result.returncode)
+                log.warning("[STT] ffmpeg failed (rc=%d), using original file", result.returncode)
                 temp_audio_path = None
-                time_offset = 0.0
             else:
-                file_path = temp_audio_path
+                transcribe_file = temp_audio_path
         except FileNotFoundError:
-            log.warning("[STT] ffmpeg not found, falling back to full file")
+            log.warning("[STT] ffmpeg not found, using original file")
             temp_audio_path = None
-            time_offset = 0.0
         except Exception as e:
-            log.warning("[STT] ffmpeg extraction failed: %s, falling back to full file", e)
+            log.warning("[STT] ffmpeg extraction failed: %s, using original file", e)
             temp_audio_path = None
-            time_offset = 0.0
 
-    log.info("[STT] Starting whisper transcription: file=%s, lang=%s", file_path, lang_arg)
+    log.info(
+        "[STT] Transcribing range: file=%s, lang=%s, offset=%.1fs, base_idx=%d",
+        transcribe_file, language_arg, time_offset, index_base,
+    )
 
-    loop = asyncio.get_running_loop()
     segments_iter, info = await loop.run_in_executor(
         None,
         lambda: _model.transcribe(
-            file_path,
-            language=lang_arg,
+            transcribe_file,
+            language=language_arg,
             beam_size=5,
             word_timestamps=True,
             vad_filter=True,
@@ -414,22 +448,14 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
             ),
             condition_on_previous_text=False,
             no_speech_threshold=0.3,
-            # Disable Whisper's temperature-fallback ladder. By default
-            # faster-whisper retries at temperatures (0.0, 0.2, 0.4, 0.6,
-            # 0.8, 1.0) when the first-pass output triggers the
-            # compression_ratio or no_speech heuristics. On long audio +
-            # Kotoba-Whisper v2 (int8-stored) this retry path crashes
-            # CTranslate2 natively on Windows — no Python exception,
-            # server process just dies. Single-temperature run avoids
-            # the crashy code path; the tradeoff is that occasional
-            # "suspicious" segments aren't re-sampled.
             temperature=0.0,
         ),
     )
 
-    duration = info.duration if info.duration and info.duration > 0 else 1.0
-    all_segments: list[dict[str, Any]] = []
-    index = 0
+    info_duration = info.duration if info.duration and info.duration > 0 else (duration_hint or 1.0)
+
+    yielded_segments: list[dict[str, Any]] = []
+    local_index = 0
 
     def _consume_next(it):
         try:
@@ -448,53 +474,146 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
             break
 
         seg_data = {
-            "index": index,
+            "index": index_base + local_index,
             "start": round(segment.start + time_offset, 3),
             "end": round(segment.end + time_offset, 3),
             "text": segment.text.strip(),
         }
-        all_segments.append(seg_data)
+        yielded_segments.append(seg_data)
 
-        yield {
-            "type": "stt_segment",
-            "job_id": job_id,
-            **seg_data,
-        }
+        yield {"type": "stt_segment", "job_id": job_id, **seg_data}
 
-        progress = min(int((segment.end / duration) * 100), 99)
+        inner_frac = min(segment.end / info_duration, 1.0)
+        progress = min(int(progress_base + inner_frac * progress_span), 99)
         yield {
             "type": "stt_progress",
             "job_id": job_id,
             "progress": progress,
-            "message": f"Transcribing... ({index + 1} segments)",
+            "message": f"Transcribing... ({index_base + local_index + 1} segments)",
         }
 
-        index += 1
+        local_index += 1
         await asyncio.sleep(0)
 
-    # Log STT statistics
-    _stt_elapsed = _time.time() - _stt_start
-    _durations = [s["end"] - s["start"] for s in all_segments]
-    log.info(
-        "[STT] Complete: %d segments in %.1fs, avg_dur=%.1fs, max_dur=%.1fs, audio=%.0fs",
-        len(all_segments), _stt_elapsed,
-        sum(_durations) / len(_durations) if _durations else 0,
-        max(_durations) if _durations else 0,
-        duration,
-    )
-
-    # Clean up temp audio file if created
     if temp_audio_path and os.path.exists(temp_audio_path):
         try:
             os.remove(temp_audio_path)
         except OSError:
             pass
 
-    # Filter segments to time range if ffmpeg was not available (fallback)
-    if start_time is not None and end_time is not None and time_offset == 0.0:
-        all_segments = [s for s in all_segments if s["end"] > start_time and s["start"] < end_time]
-        for i, s in enumerate(all_segments):
-            s["index"] = i
+    # Internal "end of this range" signal — orchestrator strips it.
+    yield {
+        "type": "_range_complete",
+        "yielded": yielded_segments,
+        "count": local_index,
+    }
+
+
+async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any], None]:
+    """Orchestrate one or many _transcribe_range calls.
+
+    - User-supplied start_time/end_time (preview): single range call.
+    - File ≤ LONG_FILE_THRESHOLD_S or probe failure: single call over
+      the whole file.
+    - Otherwise: split into CHUNK_DURATION_S slices, run sequentially,
+      accumulate segment index, scale progress across chunks.
+    """
+    import time as _time
+    _stt_start = _time.time()
+
+    file_path = job["file_path"]
+    language = job.get("language")
+    lang_arg = language if language and language != "auto" else None
+    user_start = job.get("start_time")
+    user_end = job.get("end_time")
+
+    all_segments: list[dict[str, Any]] = []
+
+    # Preview mode — user asked for a specific window. Single pass.
+    if user_start is not None and user_end is not None:
+        async for ev in _transcribe_range(
+            job_id, job, file_path, lang_arg,
+            range_start=user_start, range_end=user_end,
+            time_offset=user_start,
+            progress_base=0.0, progress_span=100.0,
+            index_base=0,
+            duration_hint=(user_end - user_start),
+        ):
+            if ev.get("type") == "_range_complete":
+                all_segments = ev["yielded"]
+                continue
+            if ev.get("type") == "cancelled":
+                yield ev
+                return
+            yield ev
+    else:
+        # Full-file mode — decide single-pass vs chunked based on duration.
+        duration = _probe_duration(file_path)
+        if duration is None or duration <= LONG_FILE_THRESHOLD_S:
+            log.info(
+                "[STT] Single-pass mode (duration=%s)",
+                f"{duration:.1f}s" if duration else "unknown",
+            )
+            async for ev in _transcribe_range(
+                job_id, job, file_path, lang_arg,
+                range_start=None, range_end=None,
+                time_offset=0.0,
+                progress_base=0.0, progress_span=100.0,
+                index_base=0,
+                duration_hint=duration or 1.0,
+            ):
+                if ev.get("type") == "_range_complete":
+                    all_segments = ev["yielded"]
+                    continue
+                if ev.get("type") == "cancelled":
+                    yield ev
+                    return
+                yield ev
+        else:
+            num_chunks = math.ceil(duration / CHUNK_DURATION_S)
+            log.info(
+                "[STT] Chunked mode: duration=%.1fs → %d x %.0fs chunks",
+                duration, num_chunks, CHUNK_DURATION_S,
+            )
+            index_base = 0
+            for chunk_i in range(num_chunks):
+                chunk_start = chunk_i * CHUNK_DURATION_S
+                chunk_end = min(chunk_start + CHUNK_DURATION_S, duration)
+                progress_base = (chunk_start / duration) * 100.0
+                progress_span = ((chunk_end - chunk_start) / duration) * 100.0
+
+                log.info(
+                    "[STT] Chunk %d/%d: %.1fs~%.1fs (progress %.1f..%.1f)",
+                    chunk_i + 1, num_chunks, chunk_start, chunk_end,
+                    progress_base, progress_base + progress_span,
+                )
+
+                async for ev in _transcribe_range(
+                    job_id, job, file_path, lang_arg,
+                    range_start=chunk_start, range_end=chunk_end,
+                    time_offset=chunk_start,
+                    progress_base=progress_base,
+                    progress_span=progress_span,
+                    index_base=index_base,
+                    duration_hint=(chunk_end - chunk_start),
+                ):
+                    if ev.get("type") == "_range_complete":
+                        all_segments.extend(ev["yielded"])
+                        index_base += ev["count"]
+                        continue
+                    if ev.get("type") == "cancelled":
+                        yield ev
+                        return
+                    yield ev
+
+    _stt_elapsed = _time.time() - _stt_start
+    _durations = [s["end"] - s["start"] for s in all_segments]
+    log.info(
+        "[STT] Complete: %d segments in %.1fs, avg_dur=%.1fs, max_dur=%.1fs",
+        len(all_segments), _stt_elapsed,
+        sum(_durations) / len(_durations) if _durations else 0,
+        max(_durations) if _durations else 0,
+    )
 
     job["state"] = SttJobState.DONE
     log.info("[STT] Transcription complete, model kept loaded (Rust will unload before LLM)")

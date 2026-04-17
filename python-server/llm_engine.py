@@ -256,6 +256,9 @@ def create_translate_job(
     media_filename: str | None = None,
     media_context: str | None = None,
     media_type: str | None = None,
+    translation_mode: str = "direct",
+    pivot_language: str | None = None,
+    pivot_glossary: list[dict[str, str]] | None = None,
 ) -> str:
     job_id = str(uuid.uuid4())
     _translate_jobs[job_id] = {
@@ -275,6 +278,9 @@ def create_translate_job(
         "media_filename": media_filename,
         "media_context": media_context,
         "media_type": media_type,
+        "translation_mode": translation_mode,
+        "pivot_language": pivot_language,
+        "pivot_glossary": pivot_glossary or [],
         "state": TranslateJobState.QUEUED,
         "cancel_flag": False,
     }

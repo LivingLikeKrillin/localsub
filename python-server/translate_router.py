@@ -31,6 +31,9 @@ class TranslateStartRequest(BaseModel):
     media_filename: str | None = None
     media_context: str | None = None
     media_type: str | None = None
+    translation_mode: str = "direct"
+    pivot_language: str | None = None
+    pivot_glossary: list[GlossaryEntryRequest] = []
 
 
 class TranslateStartResponse(BaseModel):
@@ -56,6 +59,12 @@ async def start_translate(request: TranslateStartRequest):
         media_filename=request.media_filename,
         media_context=request.media_context,
         media_type=request.media_type,
+        translation_mode=request.translation_mode,
+        pivot_language=request.pivot_language,
+        pivot_glossary=[
+            {"source": g.source, "target": g.target}
+            for g in request.pivot_glossary
+        ],
     )
     return TranslateStartResponse(job_id=job_id)
 

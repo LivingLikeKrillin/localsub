@@ -145,6 +145,44 @@ def _find_ffmpeg() -> str:
     return "ffmpeg"
 
 
+def _find_ffprobe() -> str:
+    """Locate ffprobe — mirrors _find_ffmpeg. BtbN builds ship both."""
+    appdata = os.environ.get("APPDATA", "")
+    local_ffprobe = os.path.join(appdata, "LocalSub", "bin", "ffprobe.exe")
+    if os.path.isfile(local_ffprobe):
+        return local_ffprobe
+    return "ffprobe"
+
+
+def _probe_duration(file_path: str) -> float | None:
+    """Return media duration in seconds, or None on any failure.
+
+    Used by the STT chunking logic to decide whether to split a long
+    file. Probe failure falls through to the single-pass path, so we
+    never want this to raise.
+    """
+    try:
+        result = subprocess.run(
+            [
+                _find_ffprobe(),
+                "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                file_path,
+            ],
+            capture_output=True,
+            timeout=15,
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        return None
+    if result.returncode != 0:
+        return None
+    try:
+        return float(result.stdout.decode("utf-8", errors="replace").strip())
+    except (ValueError, AttributeError):
+        return None
+
+
 def unload_model() -> None:
     global _model, _loaded_model_id, _engine_type
     log.info("[STT] Unloading model: %s", _loaded_model_id)

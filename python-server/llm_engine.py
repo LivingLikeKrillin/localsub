@@ -552,7 +552,7 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
                 if response and "choices" in response and len(response["choices"]) > 0:
                     raw_content = response["choices"][0].get("message", {}).get("content") or ""
                     translated = _postprocess(raw_content)
-                    translated = _fix_untranslated(segments[i].get("text", ""), translated)
+                    translated = _fix_untranslated(segments[i].get("text", ""), translated, vocabulary=glossary)
 
                 log.debug(
                     "[TRANSLATE] seg=%d | orig=%s | raw=%s | post=%s",

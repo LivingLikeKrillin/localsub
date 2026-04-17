@@ -324,6 +324,20 @@ pub struct Preset {
     pub enable_diarization: Option<bool>,
     #[serde(default)]
     pub media_type: Option<String>,
+    /// "direct" (default) or "pivot_2pass". Future values may add other
+    /// multi-pass strategies. Stored as a string so adding new modes
+    /// doesn't require a schema migration.
+    #[serde(default)]
+    pub translation_mode: Option<String>,
+    /// Only meaningful when `translation_mode == "pivot_2pass"`. Currently
+    /// only "en" is supported; the field is kept to avoid another
+    /// migration when other pivot languages ship.
+    #[serde(default)]
+    pub pivot_language: Option<String>,
+    /// Vocabulary used for the first leg of pivot 2-pass (source → pivot).
+    /// Ignored in direct mode.
+    #[serde(default)]
+    pub pivot_vocabulary_id: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }

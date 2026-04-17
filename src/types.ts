@@ -211,6 +211,12 @@ export interface Preset {
   two_pass_translation?: boolean;
   enable_diarization?: boolean;
   media_type?: string;
+  /** "direct" (default) | "pivot_2pass" (future: other modes). */
+  translation_mode?: string;
+  /** Pivot language code ("en" only in v1). Ignored in direct mode. */
+  pivot_language?: string;
+  /** Vocabulary used for the first leg of pivot 2-pass (source → pivot). */
+  pivot_vocabulary_id?: string | null;
   created_at: string;
   updated_at: string;
 }

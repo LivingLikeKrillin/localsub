@@ -19,7 +19,7 @@
 | A5 | `custom_translation_prompt` | ✅ preset 우선, config fallback (`2105ec1`) | preset 우선 |
 | A6 | `two_pass_translation` | ✅ preset 우선, config fallback (`2105ec1`) | preset 우선 |
 | A7 | `llm_model` | ✅ preset 우선, config fallback (`2105ec1`) | preset 우선 |
-| A8 | `whisper_model` | (확인 필요) | preset 우선 |
+| A8 | `whisper_model` | ✅ preset 우선, config fallback (커밋 뒤에 채움) | preset 우선 |
 | A9 | `media_type` | ✅ preset 사용 | 정상 |
 | A10 | `vocabulary_id` | ✅ preset 사용 (`d693acd` 에서 수정) | 정상 |
 
@@ -125,7 +125,7 @@ Output ONLY the translated line, nothing else.
 ## 우선순위 그룹
 
 ### 🔴 사용자 체감 큰 버그
-- **A8**: 프리셋 필드 반영 — `whisper_model` 라우팅 (A1~A7은 `2105ec1`에서 해결)
+- (A1~A8 모두 해결됨 — 남은 버그 없음)
 
 ### 🟡 품질 영향 (은근한 문제)
 - **B2, C1~C5**: 후처리 치환 (용어 일관성)

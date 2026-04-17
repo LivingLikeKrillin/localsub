@@ -117,7 +117,7 @@ export function usePreviewPipeline() {
         unlistenersRef.current.push(unlistenProgress);
 
         // Start STT with time range
-        const sttJob = await startStt(filePath, undefined, startTime, endTime);
+        const sttJob = await startStt(filePath, undefined, startTime, endTime, presetId);
         sttJobIdRef.current = sttJob.id;
 
         // Wait for STT completion via job-updated event

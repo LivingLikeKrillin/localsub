@@ -6,6 +6,7 @@ use crate::config_manager;
 use crate::error::AppError;
 use crate::job::Job;
 use crate::manifest_manager;
+use crate::preset_manager;
 use crate::sse_client;
 use crate::state::{ServerStatus, SharedState};
 
@@ -17,6 +18,7 @@ pub async fn start_stt(
     language: Option<String>,
     start_time: Option<f64>,
     end_time: Option<f64>,
+    preset_id: Option<String>,
 ) -> Result<Job, AppError> {
     let (port, config) = {
         let s = state.lock().map_err(|e| {
@@ -67,11 +69,23 @@ pub async fn start_stt(
         )));
     }
 
-    // Find a ready whisper model: prefer active_whisper_model from config, fallback to first ready
+    // Load preset if specified
+    let preset = preset_id.as_deref().and_then(|pid| {
+        preset_manager::load_presets()
+            .ok()
+            .and_then(|presets| presets.into_iter().find(|p| p.id == pid))
+    });
+
+    // Resolve whisper model: preset.whisper_model (if non-empty and ready)
+    // -> config.active_whisper_model (if ready) -> first ready.
     let manifest = manifest_manager::load_manifest(&config)?;
-    let whisper_model_id = config
-        .active_whisper_model
-        .as_deref()
+
+    let preset_whisper = preset
+        .as_ref()
+        .map(|p| p.whisper_model.as_str())
+        .filter(|s| !s.is_empty());
+
+    let whisper_model_id = preset_whisper
         .and_then(|id| {
             manifest
                 .models
@@ -80,12 +94,27 @@ pub async fn start_stt(
                 .map(|m| m.id.clone())
         })
         .or_else(|| {
+            config.active_whisper_model.as_deref().and_then(|id| {
+                manifest
+                    .models
+                    .iter()
+                    .find(|m| m.id == id && m.model_type == "whisper" && m.status == "ready")
+                    .map(|m| m.id.clone())
+            })
+        })
+        .or_else(|| {
             manifest
                 .models
                 .iter()
                 .find(|m| m.model_type == "whisper" && m.status == "ready")
                 .map(|m| m.id.clone())
         });
+
+    log::info!(
+        "STT model resolved — whisper={} (preset={})",
+        whisper_model_id.as_deref().unwrap_or("<none>"),
+        preset.as_ref().map(|p| p.name.as_str()).unwrap_or("<none>"),
+    );
 
     // Build request body
     let mut body = serde_json::json!({

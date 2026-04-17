@@ -446,7 +446,7 @@ export function usePipeline(
       });
 
       try {
-        const job = await startStt(filePath, sourceLanguage);
+        const job = await startStt(filePath, sourceLanguage, undefined, undefined, pipeline.presetId);
         pipeline.sttJobId = job.id;
       } catch (e) {
         pipeline.phase = "error";

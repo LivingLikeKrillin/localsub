@@ -127,8 +127,9 @@ export async function startStt(
   language?: string,
   startTime?: number,
   endTime?: number,
+  presetId?: string,
 ): Promise<Job> {
-  return invoke<Job>("start_stt", { filePath, language, startTime, endTime });
+  return invoke<Job>("start_stt", { filePath, language, startTime, endTime, presetId });
 }
 
 export async function cancelStt(jobId: string): Promise<void> {

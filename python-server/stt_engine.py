@@ -34,6 +34,36 @@ log = logging.getLogger(__name__)
 LONG_FILE_THRESHOLD_S = 60 * 60   # 3600s — single-pass for ≤60 min
 CHUNK_DURATION_S = 30 * 60        # 1800s — 30-min chunks when splitting
 
+
+def _compute_chunks(
+    duration: float | None,
+) -> list[tuple[float | None, float | None, float, float]]:
+    """Return a list of (start, end, progress_base_pct, progress_span_pct).
+
+    - duration=None → single (None, None, 0, 100) — caller transcribes the
+      whole file without ffmpeg slicing, typical when ffprobe failed.
+    - duration ≤ LONG_FILE_THRESHOLD_S → single (0, duration, 0, 100).
+    - Otherwise split into CHUNK_DURATION_S slices; the last slice may be
+      shorter than CHUNK_DURATION_S.
+
+    Used by the orchestrator so the slicing decision is trivially unit
+    testable and the generator body doesn't need to re-derive it.
+    """
+    if duration is None:
+        return [(None, None, 0.0, 100.0)]
+    if duration <= LONG_FILE_THRESHOLD_S:
+        return [(0.0, float(duration), 0.0, 100.0)]
+
+    chunks: list[tuple[float | None, float | None, float, float]] = []
+    num_chunks = math.ceil(duration / CHUNK_DURATION_S)
+    for i in range(num_chunks):
+        start = float(i * CHUNK_DURATION_S)
+        end = float(min((i + 1) * CHUNK_DURATION_S, duration))
+        base = (start / duration) * 100.0
+        span = ((end - start) / duration) * 100.0
+        chunks.append((start, end, base, span))
+    return chunks
+
 # ── Model singleton ────────────────────────────────────────────────
 
 _model: Any = None
@@ -547,64 +577,42 @@ async def _run_whisper(job_id: str, job: dict) -> AsyncGenerator[dict[str, Any],
                 return
             yield ev
     else:
-        # Full-file mode — decide single-pass vs chunked based on duration.
+        # Full-file mode — _compute_chunks picks single-pass vs chunked.
         duration = _probe_duration(file_path)
-        if duration is None or duration <= LONG_FILE_THRESHOLD_S:
-            log.info(
-                "[STT] Single-pass mode (duration=%s)",
-                f"{duration:.1f}s" if duration else "unknown",
-            )
+        chunks = _compute_chunks(duration)
+        log.info(
+            "[STT] %s mode: duration=%s, chunks=%d",
+            "Single-pass" if len(chunks) == 1 else "Chunked",
+            f"{duration:.1f}s" if duration else "unknown",
+            len(chunks),
+        )
+        index_base = 0
+        for chunk_i, (c_start, c_end, p_base, p_span) in enumerate(chunks):
+            if len(chunks) > 1:
+                log.info(
+                    "[STT] Chunk %d/%d: %.1fs~%.1fs (progress %.1f..%.1f)",
+                    chunk_i + 1, len(chunks), c_start or 0.0, c_end or 0.0,
+                    p_base, p_base + p_span,
+                )
             async for ev in _transcribe_range(
                 job_id, job, file_path, lang_arg,
-                range_start=None, range_end=None,
-                time_offset=0.0,
-                progress_base=0.0, progress_span=100.0,
-                index_base=0,
-                duration_hint=duration or 1.0,
+                range_start=c_start, range_end=c_end,
+                time_offset=(c_start or 0.0),
+                progress_base=p_base, progress_span=p_span,
+                index_base=index_base,
+                duration_hint=(
+                    (c_end - c_start) if (c_start is not None and c_end is not None)
+                    else (duration or 1.0)
+                ),
             ):
                 if ev.get("type") == "_range_complete":
-                    all_segments = ev["yielded"]
+                    all_segments.extend(ev["yielded"])
+                    index_base += ev["count"]
                     continue
                 if ev.get("type") == "cancelled":
                     yield ev
                     return
                 yield ev
-        else:
-            num_chunks = math.ceil(duration / CHUNK_DURATION_S)
-            log.info(
-                "[STT] Chunked mode: duration=%.1fs → %d x %.0fs chunks",
-                duration, num_chunks, CHUNK_DURATION_S,
-            )
-            index_base = 0
-            for chunk_i in range(num_chunks):
-                chunk_start = chunk_i * CHUNK_DURATION_S
-                chunk_end = min(chunk_start + CHUNK_DURATION_S, duration)
-                progress_base = (chunk_start / duration) * 100.0
-                progress_span = ((chunk_end - chunk_start) / duration) * 100.0
-
-                log.info(
-                    "[STT] Chunk %d/%d: %.1fs~%.1fs (progress %.1f..%.1f)",
-                    chunk_i + 1, num_chunks, chunk_start, chunk_end,
-                    progress_base, progress_base + progress_span,
-                )
-
-                async for ev in _transcribe_range(
-                    job_id, job, file_path, lang_arg,
-                    range_start=chunk_start, range_end=chunk_end,
-                    time_offset=chunk_start,
-                    progress_base=progress_base,
-                    progress_span=progress_span,
-                    index_base=index_base,
-                    duration_hint=(chunk_end - chunk_start),
-                ):
-                    if ev.get("type") == "_range_complete":
-                        all_segments.extend(ev["yielded"])
-                        index_base += ev["count"]
-                        continue
-                    if ev.get("type") == "cancelled":
-                        yield ev
-                        return
-                    yield ev
 
     _stt_elapsed = _time.time() - _stt_start
     _durations = [s["end"] - s["start"] for s in all_segments]

@@ -451,12 +451,13 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
     import time as _time
     _translate_start = _time.time()
     log.info(
-        "[TRANSLATE] Starting: %d segments, model=%s, quality=%s, two_pass=%s, context=%s",
-        total, _loaded_model_id, quality, two_pass, media_context[:80] if media_context else "none",
+        "[TRANSLATE] Starting: %d segments, model=%s, quality=%s, context=%s",
+        total, _loaded_model_id, quality, media_context[:80] if media_context else "none",
     )
-
-    # Progress scaling for 2-pass
-    pass1_weight = 0.7 if two_pass else 1.0
+    # `two_pass` flag is currently inert; self-refinement was removed and
+    # pivot 2-pass is not yet wired. Progress scales 1:1 over a single pass.
+    _ = two_pass
+    pass1_weight = 1.0
 
     try:
         loop = asyncio.get_running_loop()
@@ -656,73 +657,12 @@ async def run_translate(job_id: str) -> AsyncGenerator[dict[str, Any], None]:
 
             await asyncio.sleep(0)  # yield control
 
-        # ── Pass 2: Refinement (optional) ──────────────────────
-        if two_pass and not job["cancel_flag"]:
-            yield {
-                "type": "translate_progress",
-                "job_id": job_id,
-                "progress": 70,
-                "message": "Refining translations (pass 2)...",
-            }
-
-            for idx in range(total):
-                if job["cancel_flag"]:
-                    job["state"] = TranslateJobState.CANCELED
-                    yield {"type": "cancelled", "job_id": job_id}
-                    return
-
-                draft = completed_translations.get(idx, "")
-                messages = prompt_builder.build_refine_messages(
-                    segments, idx, draft,
-                    source_lang=source_lang,
-                    target_lang=target_lang,
-                    translations=completed_translations,
-                    context_window=context_window,
-                    glossary=glossary,
-                    custom_prompt=custom_prompt,
-                    model_category=model_category,
-                )
-
-                def _infer_refine(msgs=messages, samp=sampling):
-                    return _model.create_chat_completion(
-                        messages=msgs,
-                        max_tokens=512,
-                        temperature=samp["temperature"],
-                        top_p=samp["top_p"],
-                        repeat_penalty=samp["repeat_penalty"],
-                    )
-
-                response = await loop.run_in_executor(None, _infer_refine)
-                refined = ""
-                if response and "choices" in response and len(response["choices"]) > 0:
-                    content = response["choices"][0].get("message", {}).get("content") or ""
-                    refined = _postprocess(content)
-
-                if refined:
-                    completed_translations[idx] = refined
-                    # Update the result entry
-                    for entry in all_results:
-                        if entry["index"] == idx:
-                            entry["translated"] = refined
-                            break
-
-                    yield {
-                        "type": "translate_segment",
-                        "job_id": job_id,
-                        "index": idx,
-                        "original": segments[idx].get("text", ""),
-                        "translated": refined,
-                    }
-
-                progress = 70 + min(int(((idx + 1) / total) * 30), 29)
-                yield {
-                    "type": "translate_progress",
-                    "job_id": job_id,
-                    "progress": progress,
-                    "message": f"Refining... ({idx + 1}/{total} segments)",
-                }
-
-                await asyncio.sleep(0)
+        # Note: the previous self-refinement "2-pass" (re-ask the same model
+        # to refine its own draft) was removed — it was structurally incapable
+        # of improving quality since the same weights produce the same bias on
+        # the second pass. A real 2-pass design (pivot-language JA→EN→KO, or
+        # cross-model verification) is a separate feature and will be tracked
+        # as `translation_mode="pivot_2pass"` when implemented.
 
         # Done
         _translate_elapsed = _time.time() - _translate_start

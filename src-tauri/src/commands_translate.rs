@@ -29,10 +29,6 @@ fn resolve_opt_str(preset_val: Option<&str>, config_val: Option<&str>) -> Option
     }
 }
 
-fn resolve_bool(preset_val: Option<bool>, config_val: Option<bool>) -> Option<bool> {
-    preset_val.or(config_val)
-}
-
 #[tauri::command]
 pub async fn start_translate(
     app: AppHandle,
@@ -256,20 +252,19 @@ pub async fn start_translate(
         body["custom_prompt"] = serde_json::json!(prompt);
     }
 
-    let resolved_two_pass = resolve_bool(
-        preset.as_ref().and_then(|p| p.two_pass_translation),
-        config.two_pass_translation,
-    )
-    .unwrap_or_else(|| resolved_quality == "best");
-    body["two_pass"] = serde_json::json!(resolved_two_pass);
+    // `two_pass` stays wired for API compatibility with the Python
+    // TranslateStartRequest schema, but it's currently inert — self-refinement
+    // 2-pass was removed (same model can't fix its own bias on second look).
+    // A proper pivot 2-pass (JA→EN→KO) will land under a new
+    // `translation_mode` field in a follow-up plan.
+    body["two_pass"] = serde_json::json!(false);
 
     log::info!(
-        "Translation config resolved — lang={}→{}, style={}, quality={}, two_pass={}, custom_prompt={}, llm={} (preset={})",
+        "Translation config resolved — lang={}→{}, style={}, quality={}, custom_prompt={}, llm={} (preset={})",
         resolved_source_lang,
         resolved_target_lang,
         resolved_style,
         resolved_quality,
-        resolved_two_pass,
         if resolved_custom_prompt.is_some() { "set" } else { "none" },
         llm_model_id.as_deref().unwrap_or("<none>"),
         preset.as_ref().map(|p| p.name.as_str()).unwrap_or("<none>"),

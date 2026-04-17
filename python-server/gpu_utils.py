@@ -34,12 +34,18 @@ def detect_gpu() -> bool:
 def get_stt_device() -> tuple[str, str]:
     """Return (device, compute_type) for faster-whisper.
 
-    - GPU present  → ("cuda", "float16")
-    - CPU fallback → ("cpu", "int8")
+    `compute_type="default"` lets CTranslate2 pick the math precision that
+    matches the model's stored quantization. This matters because different
+    Whisper variants ship in different formats:
+      - Whisper Large-v3 (upstream Systran):       float16  (~3.1 GB)
+      - Kotoba-Whisper v2 (japanese fine-tune):    int8     (~1.5 GB)
+      - Qwen3-ASR is loaded through a separate code path
+    Forcing "float16" onto an int8-stored model made CT2's temperature
+    retry path segfault on Windows (observed on 2.5h audio with Kotoba).
     """
     if detect_gpu():
-        return "cuda", "float16"
-    return "cpu", "int8"
+        return "cuda", "default"
+    return "cpu", "default"
 
 
 def get_llm_n_gpu_layers() -> int:

@@ -86,7 +86,7 @@ Output ONLY the translated line, nothing else.
 | # | 항목 | 상태 |
 |---|---|---|
 | E1 | 레거시 `config.active_glossary` 시스템 병존 | ⚠️ UI 없음, 수동 수정만 가능 |
-| E2 | `build_refine_messages`가 glossary 파라미터 받지만 사용 안 함 | 🐛 누락 |
+| E2 | ~~`build_refine_messages`가 glossary 파라미터 받지만 사용 안 함~~ | ✅ 함수 제거 (`e9badf5`) |
 | E3 | `build_batch_messages`는 glossary를 **텍스트로** 주입 (chat turn 아님) | ⚠️ 다른 메커니즘, 현재 비활성 |
 | E4 | Vocabulary 언어 메타(`source_lang/target_lang`)가 필터링에 미활용 | ⚠️ 언어쌍 맞지 않는 vocab도 선택 가능 |
 
@@ -122,6 +122,7 @@ Output ONLY the translated line, nothing else.
 | G10 | Vocabulary 기반 후처리 + 기본 JA Vocabulary 번들 (B2, C1, C2, C4, F5) | `feea5d8`..`4618e99` |
 | G11 | Per-entry `fallback_only` 플래그 — LLM 입력과 후처리 역할 구분 | `1a1507c` |
 | G12 | Vocabulary 편집기에 Few-shot / 후처리 탭 UI 도입 | `f53dca9` |
+| G13 | Self-refinement 2-pass 코드 제거 — 같은 모델이 자기 편향을 못 고치므로 구조적 무의미 (E2 포함) | `e9badf5` |
 
 ---
 
